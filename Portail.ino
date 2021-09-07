@@ -1,5 +1,5 @@
 // *********************************************************
-// portail JC carte CAME ZBX6N/7N - Version 31 aout 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 4 sept 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -7,10 +7,17 @@
 // Ne pas utiliser la fonction Delay(). Utiliser Tempo().
 // L'origine 0 de l'encodeur est en position reculée (Fc arrière)=portail ouvert
 // *********************************************************
-
-// compilation pour la carte V1.0 ou V2.0
-// en V1 : l'encodeur est traité par l'IRQ matérielle, encod sur pin D8
+// Compilation pour la carte V1.0 ou V2.0
+// en V1 : l'encodeur est traité par l'IRQ matérielle, encod sur pin D8.
+// ----------------------------------------------------------------------------------
 // en V2 : l'encodeur est traité par l'IRQ matérielle, encod sur pin D3
+//         gestion de l'entrée analogique "Im_courant" pour la mesure du courant moteur.
+//         A cause du temps de conversion de 100µS d'une entrée analogique,
+//         L'IRQ timer1 acquiert la tension secteur sur A6 sur un cycle timer, puis
+//         au cycle IRQ timer1 suivant, aquiert l'image du courant moteur sur A7.
+// ----------------------------------------------------------------------------------
+// 1 tour programme principal (main) dure en moyenne 800 à 850µS
+//
 #define V1   // carte V1.0 ou V2.0
 
 #include <TimerOne.h>
@@ -31,8 +38,9 @@
 // Sans broche RESET
 #define RST_PIN -1
 
-// organisation des lignes de l'écran d'exploitation
+// organisation des lignes de l'écran d'exploitation---------------------
 #define ligne_encodeur   3
+#define ligne_erreur     7
 
 #define Tempo_sortie_menu 20 // 20 s
 // organisation des Y lignes de l'écran MENU (1)
@@ -65,56 +73,59 @@ const String ligne_menu_S[]={"Apprentissage",
 
 #define ligne_telecomA   1  // Ajouter une télécommande
 #define ligne_telecomL   2  // Liste et suppression des télécommandes
- 
-// port B de l'ATMEGA328
+
+// ports d'entrées / sorties----------------------------------------
 #define   led       13     // D13 portB.5 led intégrée
 #define   BpM       12     // D12 portB.4 Bouton -
 #define   BpP       11     // D11 portB.3 Bouton +
 #define   Var       10     // D10 portB.2 Variation (commande triac)
-#ifdef    V1
-#define   encod      8     // D8  portB.0 Encodeur 
-#define   BpEch      3     // D3  portD.3 Bouton Ech
-#endif
-#ifdef    V2
-#define   encod      3     // D3  portD.3 Encodeur 
-#define   BpEch      8     // D8  portB.0 Bouton Ech
-#endif
 #define   BpE        9     // D9  portB.1 Bouton ENTREE
-// port D de l'ATMEGA328
 #define   Commande   7     // D7  portD.7 ommande ouverture/fermeture 
 #define   FcFerme    6     // D6  portD.6 Fin de course fermé
 #define   FcOuvert   5     // D5  portD.5 Fin de course ouvert
 #define   Cellule    4     // D4  portD.4 Photo-cellule
-
 #define   data       2     // D2  portD.2 Rx radio 433 MHz
 
+#ifdef    V1               // définitions spécifiques de la carte V1
+#define   encod      8     // D8  portB.0 Encodeur 
+#define   BpEch      3     // D3  portD.3 Bouton Ech
+#endif
+
+#ifdef    V2               // définitions spécifiques de la carte V2
+#define   encod      3     // D3  portD.3 Encodeur 
+#define   BpEch      8     // D8  portB.0 Bouton Ech
+#endif
+
 // port C de l'ATMEGA328 
-#define   Scl       A5      // portC.5 SCL
-#define   Sda       A4      // portC.4 SDA
-#define   R4        A3      // portC.3 bit 3 Relais 4
-#define   R3        A2      // portC.2 bit 2 Relais 3
-#define   R2        A1      // portC.1 bit 1 Relais 2
-#define   Tick      A0      // portC.0 bit 0 tour programme
+#define   Scl       A5     // portC.5 SCL
+#define   Sda       A4     // portC.4 SDA
+#define   R4        A3     // portC.3 bit 3 Relais 4
+#define   R3        A2     // portC.2 bit 2 Relais 3
+#define   R2        A1     // portC.1 bit 1 Relais 2
+#define   Tick      A0     // portC.0 bit 0 tour programme debug oscilloscope
 // A6 et A7 uniquement en entrée analogiques
-#define   Onde      A6     // D6 numérisation signal secteur ANA 10 bits valeurs de 0 à 1023.
-#define   rien2     A7     // D7 numérisation signal secteur ANA 10 bits valeurs de 0 à 1023.
+#define   Onde      6     // A6 numérisation signal secteur ANA 10 bits valeurs de 0 à 1023.
+#define   Im_Cour   7     // A7 Image du courant moteur (V2.0)
 
-#define   Nbre_Max_telecom 40  // nombre maxi de télécommandes 
+#define   Nbre_Max_telecom 20  // nombre maxi de télécommandes 
 
-volatile int  erreur,ech,valeur,compsec,Compt10Sec,secondes,nombre,i,valeur_pwm,valeurs[100];
+volatile int  erreur,ech,valeur,compsec,Compt10Sec,secondes,nombre,i,compteur_ech,val_secteur[50];
 volatile int  Temps_boutonM,Temps_boutonP,val_tempo,ligne_menu,PosRalenti_ferm,PosRalenti_ouv ;
 volatile int  Nbre_demi_sinus,angle_retard,Temps_boutonE,AncErreur,Aech,Seq,Temps_boutonEch;
 volatile int  Tempo_menu,derniere_ligne,premiere_ligne,PageMenu,cpt_mvt,Seq_mvt,attendre,timer;
 volatile int  Nbre_telecom,tempo_affT,Nbit,Protocole,Temps_bornier,Tps_fonctionnement,Tps_fonc_P;
-volatile int  decale,offset;
+volatile int  decale,offset,Tps_cellule,Tps_ctrl_encod,cpt_mvt_10,Acourant,courant_maxi_cour;
+volatile int  val_courant[50],Nbre_cour,courant,courant_maxi;
+float         courant_moteur;
 volatile byte Sens_Ouv,Sens_Ouv_P,PPS,PPS_P,octet;
-volatile bool demande_arret,pos,trouve,etatencod,ancetatencod,Fc_ferme,Fc_ouvert,avance,recul ; 
+volatile bool demande_arret,posOnde,trouveOnde,etatencod,ancetatencod,Fc_ferme,Fc_ouvert,avance,recul ; 
 volatile bool Aferme,Aouvert,simu,recul_cours,avance_cours,posOk,MemRecul,MemAvance,memo_lent ;
 volatile bool dem_inc_boutonM,dem_inc_boutonP,Cellule_ok,ACellule,menu,Anc_BpP,Anc_BpM,Anc_BpE ;
 volatile bool simuMenu,Simu8,Simu2,Enter,m1,m2,m3,m4,m6,laled,Anc_BpEch,Etat_BpP,Etat_BpM;
 volatile bool dem_inc_boutonE,md2,md3,md6,mode_test,Etat_BpE,Etat_BpEch,dem_cpt_mvt,curseur;
 volatile bool Fm_M,Fm_E,Fm_P,Fm_Ech,Aff_ES,dem_inc_boutonEch,Fm_O,Fm_F,Fd_O,Fd_F,Dem_Telecom;
-volatile bool Dem_Liste_Tel,radio,cmd_bornier,Dem_inc_com,arrete;
+volatile bool Dem_Liste_Tel,radio,arrete,Cde_bornier,Fm_Bornier,Abornier,demande_arr_imm;
+volatile bool demande_recul_imm,cyc_ana,posCour,trouveCour;
 volatile long PosEncodeur,Anc_Encodeur,iteration,Code,telecom[Nbre_Max_telecom];
 char          inByte ;
 String        s,chaine,vide,chaineEnCours ;
@@ -123,7 +134,7 @@ SSD1306AsciiWire oled;
 RCSwitch Rx = RCSwitch();
 
 // Interruption matérielle de l'encodeur appellée si changement de front sur 
-// l'entrée D8: d8 à d13 en V1
+// l'entrée D8: D8 à D13 en V1
 // l'entrée D3 en V2
 #ifdef V1
 ISR (PCINT0_vect)
@@ -132,7 +143,7 @@ ISR (PCINT0_vect)
 void gest_encodeur()
 #endif
 {
-  //Serial.println(digitalRead(encod));
+  // Serial.println(digitalRead(encod));
   // intégration encodeur, pris en compte uniquement sur un mouvement moteur ---------
   if (avance_cours | recul_cours) 
   {
@@ -146,66 +157,116 @@ void gest_encodeur()
 // le signal 100 Hz a une période de 10 ms, soit 10/0,217 = 46 fois de passages dans l'interruption.
 void Interrupt_T1() 
 {
-  ++valeur_pwm;  // nombre d'échantillons depuis le dernier passage à 0
-  Aech=ech;
-  ech=analogRead(Onde); // lire la valeur analogique de la phase secteur
+  // lecture tension secteur
+  #ifdef V2
+  if (bit_is_clear(ADCSRA,ADSC) & !cyc_ana)  // échantillon prêt sur canal "onde"?
+  #endif
+  #ifdef V1
+  if (bit_is_clear(ADCSRA,ADSC))  // échantillon prêt ?
+  #endif
+  {  
+    ++compteur_ech;  // nombre d'échantillons depuis le dernier passage à 0
+    Aech=ech;        // ancienne valeur
+    ech=ADC;         // lire la valeur analogique de la phase secteur
 
-  // détection du passage à 0 de la sinusoide secteur
-  pos=(Aech<ech) & (ech<400);
-   
-  if (pos & (trouve==LOW))
-  {
-    trouve=HIGH;
-    AncErreur=erreur;
-    erreur=0;
-    //Serial.print("trouve");Serial.print(Aech);Serial.print(" ");Serial.println(ech);
-    ++Nbre_demi_sinus;
-    valeur_pwm=0;
+    #ifdef V2
+    // demande de conversion analogique suivante: A7=Image_Courant
+    ADMUX=(0xf0 & ADMUX) | Im_Cour ; // A7 au multiplexeur 
+    cyc_ana=HIGH;                    // indicateur canal "courant"
+    #endif
+    #ifdef V1
+    // demande de conversion analogique suivante: A6=onde
+    ADMUX=(0xf0 & ADMUX) | Onde ;  // A6 au multiplexeur 
+    #endif
+    
+    ADCSRA |=(1 << ADSC);            // mise à 1 du bit ADSC du registre ADCSRA (demande de conversion)   
+    
+    // stocker dans tableau la phase (uniquement pour inspection manuelle)
+    if ((compteur_ech<50) & (compteur_ech>=0)) val_secteur[compteur_ech]=ech;
+    // détection min sinusoide 
+    posOnde=(Aech>ech) & (ech<200);
+    if (posOnde)
+    {
+      Nbre_cour=0;
+    }
+    if (posOnde & !trouveOnde)
+    {
+      trouveOnde=HIGH;
+      if (erreur==1) erreur=0;
+      //Serial.print("trouve");Serial.print(Aech);Serial.print(" ");Serial.println(ech);
+      ++Nbre_demi_sinus;
+      compteur_ech=0;
 
-    // conditions de RAZ du compteur de nombre de demi sinusoïdes en fonction du mode
-    if ( (m2  & (Nbre_demi_sinus>=4)) |   // pour les modes m: toujours RAZ sur un nombre pair car on envoie une sinusoïde complète 1x tous les n
-         (m3  & (Nbre_demi_sinus>=6)) |
-         (m4  & (Nbre_demi_sinus>=8)) |
-         (m6  & (Nbre_demi_sinus>=12)) |
-         (md2 & (Nbre_demi_sinus>=3)) |   // pour les modes md: toujours RAZ sur un nombre impair car on envoie une demi sinusoïde 1x tous les n
-         (md3 & (Nbre_demi_sinus>=5)) |
-         (md6 & (Nbre_demi_sinus>=11)) 
-       ) 
-    Nbre_demi_sinus=0;       
-  }
+      // conditions de RAZ du compteur de nombre de demi sinusoïdes en fonction du mode
+      if ( (m2  & (Nbre_demi_sinus>=4)) |   // pour les modes m: toujours RAZ sur un nombre pair car on envoie une sinusoïde complète 1x tous les n
+           (m3  & (Nbre_demi_sinus>=6)) |
+           (m4  & (Nbre_demi_sinus>=8)) |
+           (m6  & (Nbre_demi_sinus>=12)) |
+           (md2 & (Nbre_demi_sinus>=3)) |   // pour les modes md: toujours RAZ sur un nombre impair car on envoie une demi sinusoïde 1x tous les n
+           (md3 & (Nbre_demi_sinus>=5)) |
+           (md6 & (Nbre_demi_sinus>=11)) 
+         ) 
+      Nbre_demi_sinus=0;       
+    }
 
-  if (!pos) trouve=LOW;
+    if (!posOnde) trouveOnde=LOW;
 
-  // erreur si on a pas détecté la phase 0 au bout de 60 échantillons
-  if (valeur_pwm>60)
-  {
-    AncErreur=erreur;
-    erreur=1; 
-    //Serial.println("E");
-    valeur_pwm=0;
-  }
+    // erreur si on a pas détecté la phase 0 au bout de 60 échantillons
+    if (compteur_ech>60)
+    {
+      erreur=1; 
+      //Serial.println("E");
+      compteur_ech=0;
+    }
   
-  // pilotage de la pin VAR à 1 si pas arrêté
-  if ( !arrete & (valeur_pwm>=angle_retard) & (valeur_pwm<angle_retard+10) & 
-       ( 
-         m1 | (m2 & (Nbre_demi_sinus<2)) | (m3 & (Nbre_demi_sinus<2)) |  (m4 & (Nbre_demi_sinus<2)) | (m6 & (Nbre_demi_sinus<2)) |  
-        (md2 & (Nbre_demi_sinus<1)) | (md3 & (Nbre_demi_sinus<1)) | (md6 & (Nbre_demi_sinus<1)) 
+    // pilotage de la pin VAR à 1 si pas arrêté
+    if ( !arrete & (compteur_ech>=angle_retard) & (compteur_ech<angle_retard+10) & // +10 détermine la largeur du créneau envoyé  la gachette
+         ( 
+           m1 | (m2 & (Nbre_demi_sinus<2)) | (m3 & (Nbre_demi_sinus<2)) |  (m4 & (Nbre_demi_sinus<2)) | (m6 & (Nbre_demi_sinus<2)) |  
+          (md2 & (Nbre_demi_sinus<1)) | (md3 & (Nbre_demi_sinus<1)) | (md6 & (Nbre_demi_sinus<1)) 
+         )
        )
-     )
-  {
-   digitalWrite(Var,1);
-   digitalWrite(led,1);
-  }    
-  // si on ne dépasse pas la consigne, on pilote la sortie PWM
-  else 
-  {
-    digitalWrite(Var,0);  
-    digitalWrite(led,0);
+    {
+     digitalWrite(Var,1);
+     //digitalWrite(led,1);
+    }    
+    // si on ne dépasse pas la consigne, on pilote la sortie PWM
+    else 
+    {
+      digitalWrite(Var,0);  
+      //digitalWrite(led,0);
+    }
   }
-  
-  // stocker dans tableau la phase (uniquement pour inspection manuelle)
-  if ((valeur_pwm<100) & (valeur_pwm>=0)) valeurs[valeur_pwm]=ech;
-   
+  //else Serial.println("X");
+    
+  #ifdef V2
+  // acquisition de l'image courant moteur
+  if (bit_is_clear(ADCSRA,ADSC) & cyc_ana) // échantillon prêt sur canal "courant moteur"?
+  {  
+    //Serial.println("O");  
+    Acourant=courant;  
+    courant=ADC;   // lecture de la valeur du courant
+    ++Nbre_cour;
+    if ((Nbre_cour<50) & (Nbre_cour>=0)) val_courant[Nbre_cour]=courant;
+    if (courant>courant_maxi) courant_maxi_cour=courant;
+    // détection min sinusoide courant
+    //if (desc & (Acourant<courant) & (courant<150))
+    posCour=(Acourant>courant) & (courant<150);
+    if (posCour & !trouveCour)
+    {
+      trouveCour=HIGH;
+      courant_maxi=courant_maxi_cour;    // mémoriser le courant maxi de la sinusoide courant
+      courant_maxi_cour=0;
+      Nbre_cour=0;
+    }
+    if (!posCour) trouveCour=LOW;
+    // demande de conversion analogique suivante A6=onde secteur
+    ADMUX=(0xF0 & ADMUX) | Onde;  // A6 (Onde) au multiplexeur 
+    ADCSRA |=(1 << ADSC);         // mise à 1 du ADSC (demande de conversion)
+    cyc_ana=LOW;                  // indicateur canal "onde secteur"
+  }
+  #endif
+
   ++compsec;       // compteur 1 seconde
   ++Compt10Sec;    // compteur 1/10eme de seconde
 
@@ -219,10 +280,45 @@ void Interrupt_T1()
   if (Compt10Sec>=460)
   {
     Compt10Sec=0;
-    if (Dem_inc_com) ++Temps_bornier;
-  
+
+    if (dem_cpt_mvt) ++cpt_mvt_10; else cpt_mvt_10=0;  // compteur mvt en 1/10 de s
+    // vérification de l'encodeur----------------------
+    if ((avance_cours | recul_cours) & (cpt_mvt_10>5)) // contrôle de l'encodeur après 0,5s de mouvement (pour l'accélération)
+    {
+      --Tps_ctrl_encod;
+      if (Tps_ctrl_encod<=0) 
+      {
+        Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
+        if ((abs(PosEncodeur-Anc_Encodeur)<10) & LOW)  //&&
+        { // erreur pas de changement de l'encodeur
+          erreur=3;
+          if (avance_cours) demande_recul_imm=HIGH; // sur une avance, on recule sans décélération
+          else demande_arr_imm=HIGH;                // sur un recul, on arrete sans décélération
+        }   
+        else if (erreur==3) {erreur=0;}  
+        Anc_Encodeur=PosEncodeur;
+      }
+    }
+
+    // filtrage cellule
+    if ((digitalRead(Cellule))==LOW) {Tps_cellule=3;Cellule_ok=HIGH;}
+    if (Tps_cellule>0) 
+    {
+      --Tps_cellule;
+      if (Tps_cellule==0) Cellule_ok=LOW;
+    }
+
+    // filtrage commande
+    Abornier=Cde_bornier;
+    if ((digitalRead(Commande))==LOW) {Temps_bornier=10;Cde_bornier=HIGH;}
+    if (Temps_bornier>0) 
+    {
+      --Temps_bornier;
+      if (Temps_bornier==0) {Cde_bornier=LOW;}
+    }
+    Fm_Bornier=!Abornier & Cde_bornier;
+    
     if (val_tempo!=0) --val_tempo;
-    ++PosEncodeur; // pour test à enlever&&&
   }
   // seconde
   if (compsec>=4608)
@@ -234,13 +330,7 @@ void Interrupt_T1()
     if (dem_cpt_mvt) ++cpt_mvt;
     if (Tempo_menu>0) ++Tempo_menu;
     //digitalWrite(led,laled);
-    // vérification de l'encodeur
-    if (avance_cours | recul_cours)
-    {
-     if (abs(PosEncodeur-Anc_Encodeur)<10) erreur=3; else if (erreur==3) erreur=0;
-     Anc_Encodeur=PosEncodeur;
-    }
-  } 
+  }  
 } 
 
 // masque de l'écran de base
@@ -254,7 +344,7 @@ void Ecran_base()
   oled.set1X();
   //oled.setScrollMode(SCROLL_MODE_AUTO);
   oled.setScrollMode(SCROLL_MODE_OFF);
-  oled.setCursor(0,ligne_encodeur);oled.println("Position=0");
+  oled.setCursor(0,ligne_encodeur);oled.println("Pos=0");
 }
 
 void ecrit_eprom()
@@ -286,12 +376,13 @@ void lit_eprom()
    Nbre_telecom=EEPROM.read(2);       // Nombre de télécommandes mémorisées
    Tps_fonctionnement=EEPROM.read(3); // temps maximal de fonctionnement
     
-   if (Nbre_telecom>Nbre_Max_telecom) Nbre_telecom=Nbre_Max_telecom;
+   if (Nbre_telecom>Nbre_Max_telecom) Nbre_telecom=0;
    if ((Sens_Ouv>1) | (Sens_Ouv<0)) Sens_Ouv=1;
    if ((PPS>1) | (PPS<0)) PPS=1;
    if ((Tps_fonctionnement>99) | (Tps_fonctionnement<1)) Tps_fonctionnement=99;
    
    // les codes des télécommandes sont stockées en @10 eeprom
+   // on peut stocker (1024-10)/4 = 253 télécommandes
    for (i=0 ; i<Nbre_telecom ; i++)
    {
      L1=EEPROM.read((i*4)+10);
@@ -346,6 +437,13 @@ void setup()
   Serial.println(F("Programme portail JC - F1IWQ 2021"));
   Serial.println(F("Tapez ? pour l'aide"));
 
+  // initialisation de la conversion analogique
+  // nota on ne peut pas utiliser analogRead qui prend 100µS ce qui est beaucoup trop long.
+  // On utlise donc les convertiseurs de façon asynchone. (demande de conv et lecture de la valeur plus tard)
+  ADMUX |= (1 << REFS0);  // référence de tension interne
+  ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); // prédivision à 128
+  ADCSRA |= (1 << ADEN);  //valide le convertisseur
+  
   // Raz des télécommandes
   for (i=0 ; i<Nbre_Max_telecom ; i++) telecom[i]=0;
      
@@ -367,7 +465,8 @@ void setup()
   
   // rx 433 MHz -------------------------
   Rx.enableReceive(digitalPinToInterrupt(data));  // On reçoit sur INT0 (data=pin D2)
-
+  
+  // IRQ encodeur --------------------------------
   #ifdef V1
   //en V1 association de l'IRQ sur portB.0=D8=encodeur
   PCICR|=0x01;  // changement du portB
@@ -384,15 +483,19 @@ void setup()
   // Initialisation des variables
   chaine="";
   chaineEnCours="";
-  valeur_pwm=0;     // valeur courante du compteur pwm
+  compteur_ech=0;   // valeur courante du compteur d'échantillons
   PosEncodeur=0;    // position de l'encodeur
   angle_retard=0;   // décalage entre 0 secteur et impulsion gâchette
   erreur=0;
+  AncErreur=0;
   posOk=false;      // position connue encodeur
   menu=LOW;         // pas mode menu
+  cyc_ana=LOW;      // indicateur canal "onde secteur"
+  demande_recul_imm=LOW;
+  demande_arr_imm=LOW;
   arrete=HIGH;
   mode_test=HIGH;   // permet d'utiliser GV même si position inconnue par les commandes terminal
-  mode1();          // vitesse mode 1
+  mode1();          // vitesse mode 1=GV
   vide=F("                     ");
 
   // initialisation interruption Timer 1
@@ -417,17 +520,17 @@ void setup()
 // traitement de fond à effectuer à chaque itération-----------------------
 void traitement()
 {
+  //digitalWrite(led,digitalRead(data));
   bool trouve;
   // lecture des fins de course et des autres entrées
   // Etats précédents (n-1)
   Aferme=Fc_ferme;
   Aouvert=Fc_ouvert;
-  ACellule=Cellule;
  
   Anc_BpP=Etat_BpP;
   Anc_BpM=Etat_BpM;
   Anc_BpE=Etat_BpE;
-  Anc_BpEch=Etat_BpEch;
+  Anc_BpEch=Etat_BpEch; 
   
   // Etats actuels (n)
   Etat_BpP=Etat_BoutonP();
@@ -436,14 +539,13 @@ void traitement()
   Etat_BpEch=Etat_BoutonEch();
   Fc_ferme=!digitalRead(FcFerme)  ;  //&& vérifier  
   Fc_ouvert=!digitalRead(FcOuvert) ;  //&& vérifier
-  Cellule_ok=digitalRead(Cellule) | HIGH ; // &&
   
-
   // Fronts montants !(n-1) & (n)
   Fm_P=!Anc_BpP & Etat_BpP;
   Fm_M=!Anc_BpM & Etat_BpM;
   Fm_E=!Anc_BpE & Etat_BpE;
-  Fm_Ech=!Anc_BpP & Etat_BpEch;
+  Fm_Ech=!Anc_BpEch & Etat_BpEch;
+  
   // fronts montants des Fdc (acostage)
   Fm_F=!Aferme & Fc_ferme;
   Fm_O=!Aouvert & Fc_ouvert;
@@ -451,7 +553,7 @@ void traitement()
   // Fronts descendants des Fdc (on les quitte)
   Fd_F=Aferme & !Fc_ferme;
   Fd_O=Aouvert & !Fc_ouvert;
-  
+
   // vérification temps de mvt
   if (cpt_mvt>Tps_fonctionnement) 
   {
@@ -459,12 +561,50 @@ void traitement()
     erreur=2;
   }
 
+  // recul immédiat
+  if (demande_recul_imm)
+  {
+    s=F("Recul immediat ");
+    Serial.println(s); 
+    oled.setCursor(0,2);oled.print(s);
+    
+    arret();
+    recul_lent();
+    demande_recul_imm=LOW;
+  }
+  
+  // arret immédiat (sans décélération)
+  if (demande_arr_imm) 
+  {
+    s=F("Arret immediat ");
+    Serial.println(s); 
+    oled.setCursor(0,2);oled.print(s);
+    
+    arret();
+    demande_arr_imm=LOW;
+  }
+
   if ( (Fd_F & recul_cours)  | (Fd_O & avance_cours) ) Seq_mvt=0; // début de la séquence d'un mouvement complet de Fc à Fc pour le comptage temps maxi
+
+  // affichage position codeur, temps de fonctionnement et courant moteur
+  if (avance_cours | recul_cours)
+  {
+    //courant_moteur=courant_maxi*5*0.707/1024  ou courant_moteur=courant_maxi/289
+    if ((iteration % 150)==0)  // Affichage tous les 150 tours
+    {
+      oled.setCursor(24,ligne_encodeur);oled.print(PosEncodeur);oled.print(" ");oled.print(cpt_mvt);oled.print(" ");
+      #ifdef V2
+      courant_moteur=(float) courant_maxi/289;
+      oled.print(courant_moteur);oled.print(F("A ")); 
+      #endif
+    }  
+  }
   
   // avance en cours (fermeture) ----------------------------------------------
   if (avance_cours==HIGH)
   {
-    oled.setCursor(54,ligne_encodeur);oled.print(PosEncodeur);oled.print(" ");oled.print(cpt_mvt);oled.print(" "); // &&
+    if (erreur==2) erreur=0;
+    
     // front montant Fc avancé
     if ((!Aferme) & (Fc_ferme) & (posOk)) 
     {
@@ -479,7 +619,7 @@ void traitement()
     }
     
     // passer en pv
-    if ((PosEncodeur>PosRalenti_ferm) & (memo_lent==LOW))
+    if (posOk & (PosEncodeur>PosRalenti_ferm) & (memo_lent==LOW))
     {
       Serial.println(F("Position lente vers avance atteinte"));
       avance_lente();
@@ -489,7 +629,8 @@ void traitement()
   // recul en cours (ouverture) -----------------------------------------------
   if (recul_cours==HIGH)
   {
-    oled.setCursor(54,ligne_encodeur);oled.print(PosEncodeur);oled.print(" ");oled.print(cpt_mvt);oled.print(" "); //&&
+    if (erreur==2) erreur=0;
+
     // front montant Fc reculé
     if ((!Aouvert) & (Fc_ouvert)) 
     {
@@ -506,13 +647,13 @@ void traitement()
     }
     
     // passer en PV
-    if ((PosEncodeur<PosRalenti_ouv) & (memo_lent==LOW))
+    if (posOk & (PosEncodeur<PosRalenti_ouv) & (memo_lent==LOW))
     {
       Serial.println(F("Position lente vers recul atteinte"));
       recul_lent();
     }
   }
-  
+
   // récepteur radio ----------------------------------------------------
   if (Rx.available()) 
   {
@@ -689,10 +830,10 @@ void avance_rapide()
     if (!avance_cours)
     {
       Serial.println(F("Accélération avance"));
-      avance_lente();    // accélération
+      avance_lente();  // accélération
       tempo(10);
     }
-    if (recul_cours)  // inversion
+    if (recul_cours)   // inversion
     {
       recul_lent();
       tempo(10);  
@@ -730,7 +871,7 @@ void avance_rapide()
 
 void recul_rapide()
 {
-  if ((Fc_ouvert==LOW) & (Cellule_ok))
+  if (Fc_ouvert==LOW)  // en recul on ne tient pas compte de la cellule
   {
     if (!recul_cours)
     {
@@ -813,7 +954,7 @@ void avance_lente()
 
 void recul_lent()
 {
-  if ((Fc_ouvert==LOW) & (Cellule_ok))
+  if (Fc_ouvert==LOW)  // en recul on ne tient pas compte de la cellule
   {
     if (avance_cours)
     {
@@ -825,19 +966,19 @@ void recul_lent()
     s=F("Recul lent   ");
     oled.setCursor(0,2);oled.println(s);
     Serial.println(s);
-    mode2();                // vitesse lente
-    digitalWrite(R2,HIGH);  // R2 à 1 (N sur W et éclairage)
+    mode2();                   // vitesse lente
+    digitalWrite(R2,HIGH);     // R2 à 1 (N sur W et éclairage)
     if (Sens_Ouv==1)
     {
-      digitalWrite(R3,LOW);   // R3 à 0 (rien sur V)
-      digitalWrite(R4,HIGH);  // R4 à 1 (CT sur U)
+      digitalWrite(R3,LOW);    // R3 à 0 (rien sur V)
+      digitalWrite(R4,HIGH);   // R4 à 1 (CT sur U)
     }
     else
     {
       digitalWrite(R3,HIGH);  // R3 à 1 (CT sur V)
       digitalWrite(R4,LOW);   // R4 à 0 (rien sur U)
     }  
-    recul=HIGH;             // mémorisation on recule
+    recul=HIGH;               // mémorisation on recule
     avance=LOW;
     avance_cours=LOW;
     recul_cours=HIGH;
@@ -850,7 +991,7 @@ void recul_lent()
 void arret()
 {
   oled.setCursor(0,2); s=F("Arret          ");oled.println(s);
-  oled.setCursor(0,5);oled.println(F("                   "));
+  oled.setCursor(0,5);oled.println(vide);
   Serial.println(s);  
   digitalWrite(R2,LOW);   // R2 à 0 (rien sur W ni éclairage)
   digitalWrite(R3,LOW);   // R3 à 0 (rien sur V)
@@ -891,12 +1032,10 @@ bool Etat_BoutonE()
 
 bool Etat_BoutonEch()
 {
-  /* &&
   dem_inc_boutonEch=!digitalRead(BpEch);  // si bouton=0, incrémenter la tempo d'appui
   if (!dem_inc_boutonEch) Temps_boutonEch=0;
   if (Temps_boutonEch>500) Tempo_menu=1;
   return (Temps_boutonEch>500) ;            // si tempo d'appui>0,2 s ok
-  */
 }
 
 // fond de la page menu, page à déroulement
@@ -913,6 +1052,7 @@ void fond_menu()
   }    
 }
 
+// écran de fond menu télécommandes
 void fond_telecom()
 {
   if (Nbre_telecom>0)
@@ -930,43 +1070,48 @@ void fond_telecom()
 // ------------------------------------------------ P R O G R A M M E   P R I N C I P A L --------------------------------------------
 void loop() 
 {
-  //digitalWrite(Tick,HIGH);
+  digitalWrite(Tick,HIGH);
   ++iteration;
   if (iteration>32000) iteration=0;
     
   traitement();    // traitement de fond
-  //digitalWrite(Tick,LOW);
+  digitalWrite(Tick,LOW);
   if (!menu)
   { 
     // affichage erreur
     if ((AncErreur==0) & (erreur==1))
     { 
+      AncErreur=erreur;
       s=F("Secteur non trouve  ");
       //Serial.println(s);
-      oled.setCursor(0,7);oled.print(s);
+      oled.setCursor(0,ligne_erreur);oled.print(s);
     }
 
     if ((AncErreur==1) & (erreur==0))
     { 
+      AncErreur=erreur;
       s=F("Secteur trouve     ");
       //Serial.println(s);
-      oled.setCursor(0,7);oled.print(s);
+      oled.setCursor(0,ligne_erreur);oled.print(s);
     }
 
     if ((AncErreur==0) & (erreur==2))
     { 
+      AncErreur=erreur;
       s=F("Erreur mvt trop long");
-      oled.setCursor(0,7);oled.print(s);
+      oled.setCursor(0,ligne_erreur);oled.print(s);
       Serial.println(s);
     }  
 
     if ((AncErreur==3) & (erreur==0))
     { 
-      oled.setCursor(0,7);oled.print(vide);
+      AncErreur=erreur;
+      oled.setCursor(0,ligne_erreur);oled.print(vide);
     }
     if ((AncErreur==0) & (erreur==3))
     { 
-      oled.setCursor(0,7);oled.print(F("Encodeur muet"));
+      AncErreur=erreur;
+      oled.setCursor(0,ligne_erreur);oled.print(F("Encodeur muet       "));
     }
 
     // Affichage Evt Fdc et cellule ----------------------------------------------------------
@@ -984,19 +1129,20 @@ void loop()
       oled.setCursor(0,4);oled.println(s);
     }
 
-    if ((ACellule==LOW) & (Cellule))
+    if ((ACellule==LOW) & (Cellule_ok))
     {
       s=F("Cellule OK    ");
       Serial.println(s);
       oled.setCursor(0,6);oled.println(s);
-    }
+    }  
 
-    if ((ACellule==HIGH) & (!Cellule))
+    if ((ACellule==HIGH) & (!Cellule_ok))
     {
       s=F("Cellule coupée");
       Serial.println(s);
       oled.setCursor(0,6);oled.println(s);
     }
+    ACellule=Cellule_ok;
   }
     
   //réception des données depuis USB
@@ -1030,7 +1176,8 @@ void loop()
     Serial.println(F("m1 à m6 : 1 sinusoide sur 1..6"));
     Serial.println(F("md2 à 6 : 1/2 sinusoide sur 2..5"));
     tempo(1);
-    Serial.println(F("ech     : Affiche la valeur des échantillons "));
+    Serial.println(F("sec     : Affiche la sinusoide du secteur"));  
+    Serial.println(F("cour    : Affiche la sinusoide du courant moteur"));
     Serial.println(F("pos     : Affiche la position de l'encodeur")); 
     Serial.println(F("tar     : Avance en rapide")); 
     tempo(1);
@@ -1169,16 +1316,30 @@ void loop()
   }
   else
   
-  if (chaine=="ech")
+  if (chaine=="sec")
   {
     Serial.print(F("Erreur="));Serial.println(erreur);
     for (i=0 ; i<=50 ; i++)
     {
-      Serial.print(i);Serial.print(F(" "));Serial.println(valeurs[i]);
+      Serial.print(i);Serial.print(F(" "));
+      Serial.println(val_secteur[i]);
     }
     chaine="";
   }
   else 
+
+  if (chaine=="cour")
+  {
+    Serial.print(F("Erreur="));Serial.println(erreur);
+    for (i=0 ; i<=50 ; i++)
+    {
+      Serial.print(i);Serial.print(F(" "));
+      Serial.println(val_courant[i]);
+    }
+    chaine="";
+  }
+  else 
+  
 
   if (chaine=="pos")
   {
@@ -1219,26 +1380,6 @@ void loop()
   }
   else
   
-  // arret ----------------------------------------------------------------
-  if (demande_arret)
-  {
-     // si mvt en cours, décélérer avant arrêt
-     if (recul_cours & !memo_lent)
-     {
-        recul_lent();   
-        tempo(10);
-     }
-     if (avance_cours & !memo_lent)
-     {
-        avance_lente();
-        tempo(10);
-     }   
-     Serial.println(F("Arret par terminal"));
-     arret();
-     chaine="";
-  }
-
-  else
   if (chaine=="im")
   {
     Serial.print(F("Menu="));Serial.println(menu);
@@ -1256,14 +1397,10 @@ void loop()
    chaine="";
   }
 
-  Dem_inc_com=digitalRead(Commande)==1;
-  if (!Dem_inc_com) Temps_bornier=0;
-  cmd_bornier=(Temps_bornier>5) & !menu;
-
   // demande de mouvement depuis le bornier (J4 bornes 2/7) ou radio -----------------------
-  if (cmd_bornier | simu | radio)  
-  {
-    if (cmd_bornier) s=F("Commande bornier");
+  if (((Fm_Bornier | radio) & !menu) | simu)  
+  {  
+    if (Fm_Bornier) {s=F("Commande bornier");Fm_Bornier=LOW;}
     if (radio) s=F("Commande radio  ");
     radio=LOW;   
     simu=LOW;
@@ -1300,6 +1437,27 @@ void loop()
       }  
     }
   }
+
+  // arret ----------------------------------------------------------------
+  if (demande_arret)
+  {
+     // si mvt en cours, décélérer avant arrêt
+     if (recul_cours & !memo_lent)
+     {
+        recul_lent();   
+        tempo(10);
+     }
+     if (avance_cours & !memo_lent)
+     {
+        avance_lente();
+        tempo(10);
+     }   
+     Serial.println(F("Arret par terminal"));
+     arret();
+     chaine="";
+  }
+
+ 
 
   // gestion écrans -----------------------------------------------
  
