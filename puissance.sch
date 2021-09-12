@@ -643,8 +643,6 @@ Wire Wire Line
 Wire Wire Line
 	4150 3150 4600 3150
 Connection ~ 4600 3150
-Text Notes 3100 3050 2    50   ~ 0
-fil isolé 0,5 mm²\nà souder entre\nH11 et H12\nau travers du ZMCT
 Wire Wire Line
 	7100 3150 8750 3150
 Connection ~ 7100 3150
@@ -685,8 +683,6 @@ Wire Wire Line
 	3200 5500 3200 5550
 Connection ~ 3200 5550
 Wire Wire Line
-	3200 5550 3200 5850
-Wire Wire Line
 	2500 5550 3200 5550
 Wire Wire Line
 	4600 5150 4600 5200
@@ -695,34 +691,8 @@ Wire Wire Line
 Wire Wire Line
 	4600 5500 4600 5850
 Connection ~ 3200 5150
-Wire Wire Line
-	3200 3950 3200 5150
-Text GLabel 3350 2700 2    50   Input ~ 0
+Text GLabel 3350 3150 2    50   Input ~ 0
 CT
-$Comp
-L Mechanical:MountingHole_Pad H11
-U 1 1 6122C890
-P 3200 3500
-F 0 "H11" H 3100 3457 50  0000 R CNN
-F 1 "Pad" H 3100 3548 50  0000 R CNN
-F 2 "MountingHole:MountingHole_2.2mm_M2_Pad" H 3200 3500 50  0001 C CNN
-F 3 "~" H 3200 3500 50  0001 C CNN
-	1    3200 3500
-	-1   0    0    1   
-$EndComp
-$Comp
-L Mechanical:MountingHole_Pad H12
-U 1 1 6122B8CD
-P 3200 3850
-F 0 "H12" H 3300 3899 50  0000 L CNN
-F 1 "Pad" H 3300 3808 50  0000 L CNN
-F 2 "MountingHole:MountingHole_2.2mm_M2_Pad" H 3200 3850 50  0001 C CNN
-F 3 "~" H 3200 3850 50  0001 C CNN
-	1    3200 3850
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	3200 2700 3200 3400
 $Comp
 L power:GND #PWR?
 U 1 1 613FFBB9
@@ -738,61 +708,10 @@ F 3 "" H 4650 4800 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	4650 4700 4650 4800
-Wire Notes Line
-	3200 3550 3200 3800
-Wire Notes Line
-	3600 4350 1000 4350
-Wire Notes Line
-	1000 2450 3600 2450
-Text GLabel 2550 3600 0    50   Input ~ 0
-Im_Cour
 Wire Wire Line
-	3200 2700 3350 2700
-Text Notes 1350 3700 0    59   ~ 0
-  Mesure du \ncourant moteur
-$Comp
-L Connector:Conn_01x04_Male J?
-U 1 1 61368E20
-P 2950 3600
-AR Path="/61368E20" Ref="J?"  Part="1" 
-AR Path="/6130ED2A/61368E20" Ref="J12"  Part="1" 
-F 0 "J12" H 3050 3850 50  0000 L CNN
-F 1 "ZMCT103C" H 2950 4000 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 2950 3600 50  0001 C CNN
-F 3 "~" H 2950 3600 50  0001 C CNN
-	1    2950 3600
-	-1   0    0    -1  
-$EndComp
-$Comp
-L power:GND #PWR?
-U 1 1 6136AA8A
-P 2650 3900
-AR Path="/6136AA8A" Ref="#PWR?"  Part="1" 
-AR Path="/6130ED2A/6136AA8A" Ref="#PWR021"  Part="1" 
-F 0 "#PWR021" H 2650 3650 50  0001 C CNN
-F 1 "GND" H 2655 3727 50  0000 C CNN
-F 2 "" H 2650 3900 50  0001 C CNN
-F 3 "" H 2650 3900 50  0001 C CNN
-	1    2650 3900
-	1    0    0    -1  
-$EndComp
+	3200 3150 3350 3150
 Wire Wire Line
-	2750 3700 2650 3700
+	3200 3150 3200 5150
 Wire Wire Line
-	2650 3700 2650 3800
-Wire Wire Line
-	2750 3800 2650 3800
-Connection ~ 2650 3800
-Wire Wire Line
-	2650 3800 2650 3900
-Wire Wire Line
-	2550 3600 2750 3600
-Wire Wire Line
-	2750 3500 2550 3500
-Text GLabel 2550 3500 0    50   Input ~ 0
-5V
-Wire Notes Line
-	1000 4350 1000 2450
-Wire Notes Line
-	3600 2450 3600 4350
+	3200 5550 3200 5850
 $EndSCHEMATC
