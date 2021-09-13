@@ -485,7 +485,7 @@ void setup()
   arrete=HIGH;
   Cellule_ok=HIGH;  // provoque le message cellule coupée au démarrage si la cellule est coupée
   Tps_cellule=1;    // "
-  mode_test=HIGH;   // permet d'utiliser GV même si position inconnue ou encodeur muet ; attention aux chocs en fin de parcours!!!
+  mode_test=LOW;    // permet d'utiliser GV même si position inconnue ou encodeur muet ; attention aux chocs en fin de parcours!!!
   posOk=mode_test;  // position connue encodeur
   mode2();          // vitesse mode 1=PV
   vide=F("                     ");
