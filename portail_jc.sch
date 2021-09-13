@@ -874,8 +874,6 @@ Wire Wire Line
 	5700 1550 5600 1550
 Text Label 5800 1350 1    50   ~ 0
 1
-Text Notes 3550 2550 0    59   ~ 0
-sur la carte d'origine, les 0V des tensions alternatives \nsont reliées au 0V des tensions continues
 $Comp
 L Connector:Conn_01x03_Male J10
 U 1 1 61167225
