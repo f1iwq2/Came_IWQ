@@ -115,7 +115,7 @@ volatile int  Temps_boutonM,Temps_boutonP,val_tempo,ligne_menu,PosRalenti_ferm,P
 volatile int  Nbre_demi_sinus,angle_retard,Temps_boutonE,AncErreur,Aech,Seq,Temps_boutonEch;
 volatile int  Tempo_menu,derniere_ligne,premiere_ligne,PageMenu,cpt_mvt,Seq_mvt,attendre,timer;
 volatile int  Nbre_telecom,tempo_affT,Nbit,Protocole,Temps_bornier,Tps_fonctionnement,Tps_fonc_P;
-volatile int  decale,offset,Tps_cellule,Tps_ctrl_encod,cpt_mvt_10;
+volatile int  decale,offset,Tps_cellule,Tps_ctrl_encod,cpt_mvt_10,AAAech,AAech;
 volatile int  PosEncodeur,Anc_Encodeur,vitesse,AncPos;
 volatile byte Sens_Ouv,Sens_Ouv_P,PPS,PPS_P,octet,compt_vit,TpsRalenti_ouv,TpsRalenti_ferm;
 volatile bool demande_arret,posOnde,trouveOnde,etatencod,ancetatencod,Fc_ferme,Fc_ouvert,avance,recul ; 
@@ -162,25 +162,27 @@ void Interrupt_T1()
   if (bit_is_clear(ADCSRA,ADSC))  // échantillon prêt ?
   {  
     ++compteur_ech;  // nombre d'échantillons depuis le dernier passage à 0
+    AAAech=AAech;
+    AAech=Aech;
     Aech=ech;        // ancienne valeur
     ech=ADC;         // lire la valeur analogique de la phase secteur
 
     // demande de conversion analogique suivante
-    ADMUX=(0xf0 & ADMUX) | Onde ;  // A6 au multiplexeur 
+    ADMUX=(0xf0 & ADMUX) | Onde ;    // A6 au multiplexeur 
     ADCSRA |=(1 << ADSC);            // mise à 1 du bit ADSC du registre ADCSRA (demande de conversion)   
     
     // stocker dans tableau la phase (uniquement pour inspection manuelle)
-    if ((compteur_ech<50) & (compteur_ech>=0)) val_secteur[compteur_ech]=ech;
+    if ((compteur_ech<50) & (compteur_ech>=0) & (erreur!=1)) val_secteur[compteur_ech]=ech;
     
     // détection min sinusoide 
-    posOnde=(Aech>ech) & (ech<100);
+    posOnde=(AAAech>AAech) & (Aech<ech) & (ech<250); 
     if (posOnde & !trouveOnde)
     {
       trouveOnde=HIGH;
-      if (erreur==1) erreur=0;
-      //Serial.print("trouve");Serial.print(Aech);Serial.print(" ");Serial.println(ech);
+      if (erreur==1) erreur=0; 
       ++Nbre_demi_sinus;
       compteur_ech=0;
+      if (erreur!=1) val_secteur[compteur_ech]=ech;
 
       // conditions de RAZ du compteur de nombre de demi sinusoïdes en fonction du mode
       if ( (m2  & (Nbre_demi_sinus>=4)) |   // pour les modes m: toujours RAZ sur un nombre pair car on envoie une sinusoïde complète 1x tous les n
@@ -1134,7 +1136,7 @@ void loop()
     { 
       AncErreur=erreur;
       s=F("Secteur non trouve  ");
-      //Serial.println(s);
+      Serial.println(s);
       oled.setCursor(0,ligne_erreur);oled.print(s);
     }
 
@@ -1142,7 +1144,7 @@ void loop()
     { 
       AncErreur=erreur;
       s=F("Secteur trouve     ");
-      //Serial.println(s);
+      Serial.println(s);
       oled.setCursor(0,ligne_erreur);oled.print(s);
     }
 
