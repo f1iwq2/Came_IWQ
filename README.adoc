@@ -1,13 +1,11 @@
 Carte CAME-IWQ
 ==============
 
-Replacement control board for CAME sliding gates
 Carte de remplacement pour portail coulissants CAME
-Documents in pdf files
 ZBX6N/7N - A base d'arduino nano
+fichiers gerber dans le répertoire trace
 
-
-
-
-
+Replacement control board for CAME sliding gates
+Documents in pdf files
+gerber files in trace directory
 

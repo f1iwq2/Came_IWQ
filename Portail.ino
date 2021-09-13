@@ -1,5 +1,5 @@
 // *********************************************************
-// portail IWQ carte CAME ZBX6N/7N - Version 12 sept 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 13 sept 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -290,8 +290,8 @@ void Interrupt_T1()
     if (Tempo_menu>0) ++Tempo_menu;
   }  
 
-  // les signaux cellule et bornier présentent un pic de tension bas toutes les 10ms
-  // car ils sont alimentés par un optocoupleur AC non filtré 
+  // les signaux cellule et commande présentent un pic de tension haut toutes les 10ms
+  // car ils sont alimentés par un optocoupleur AC (U2A et U2D)
   // filtrage à 60x0,217ms = 13 ms : tempo de recouvrement suffisante
   // filtrage cellule 
   ACellule=Cellule_ok;
@@ -344,7 +344,7 @@ void ecrit_eprom()
   EEPROM.write(6,PosRalenti_ouv >> 8);     // 2 octets
   EEPROM.write(7,PosRalenti_ouv & 0xFF);  
   EEPROM.write(8,TpsRalenti_ouv);
-  EEPROM.write(8,TpsRalenti_ferm);
+  EEPROM.write(9,TpsRalenti_ferm);
      
   // les codes des télécommandes sont stockées sur 4 octets (long) à partir de l'adresse 10
   for (i=0 ; i<Nbre_telecom ; i++)
@@ -651,7 +651,7 @@ void traitement()
   // récepteur radio ----------------------------------------------------
   if (Rx.available()) 
   {
-    if ((tempo_affT<9) )  // radio filtrée 1 seconde & !menu
+    if ((tempo_affT<9) )  // radio filtrée 1 seconde
     {
       Serial.print("Recu de RX: ");
       Code=Rx.getReceivedValue();
@@ -962,7 +962,7 @@ void avance_lente()
      {
         // on vient de GV vers PV: passer en mode 2/3
         mode_23();
-        tempo(5);
+        tempo(7);
       }
       mode2();                // vitesse lente
       digitalWrite(R2,HIGH);  // R2 à 1 (N sur W et éclairage)
@@ -976,7 +976,7 @@ void avance_lente()
         digitalWrite(R3,LOW);   // R3 à 0 (rien sur V)
         digitalWrite(R4,HIGH);  // R4 à 0 (CT sur U)  
       }
-      avance=HIGH;            // mémorisation on avance
+      avance=HIGH;              // mémorisation on avance
       recul=LOW;  
       avance_cours=HIGH;
       recul_cours=LOW;
@@ -1005,7 +1005,7 @@ void recul_lent()
     {
       // on vient de GV vers PV: passer en mode 2/3
       mode_23();
-      tempo(5);
+      tempo(7);
     }
     mode2();                   // vitesse lente
     digitalWrite(R2,HIGH);     // R2 à 1 (N sur W et éclairage)
