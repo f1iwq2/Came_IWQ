@@ -588,7 +588,7 @@ void traitement()
     if ((iteration % 200)==0)  // Affichage tous les 200 tours
     {
       oled.setCursor(24,ligne_encodeur);oled.print(PosEncodeur);oled.print(" ");
-      oled.print(cpt_mvt);oled.print(" V=");
+      oled.print(cpt_mvt);oled.print("s V=");
       oled.print(vitesse);oled.print(" ");
       
     }  
@@ -966,6 +966,7 @@ void avance_lente()
       }
       mode2();                // vitesse lente
       digitalWrite(R2,HIGH);  // R2 à 1 (N sur W et éclairage)
+      tempo(2);               // évite de coller 2 relais simultanément
       if (Sens_Ouv==1)
       {
         digitalWrite(R3,HIGH);  // R3 à 1 (CT sur V)
@@ -1009,6 +1010,7 @@ void recul_lent()
     }
     mode2();                   // vitesse lente
     digitalWrite(R2,HIGH);     // R2 à 1 (N sur W et éclairage)
+    tempo(2);                  // évite de coller 2 relais simultanément
     if (Sens_Ouv==1)
     {
       digitalWrite(R3,LOW);    // R3 à 0 (rien sur V)
