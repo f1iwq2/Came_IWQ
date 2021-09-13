@@ -795,8 +795,6 @@ Wire Wire Line
 Wire Wire Line
 	7500 3600 7500 3700
 Wire Wire Line
-	7500 2950 7500 3050
-Wire Wire Line
 	7450 4050 7950 4050
 Connection ~ 1400 5900
 $Sheet
@@ -998,8 +996,6 @@ F 3 "" H 7500 5350 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	7450 5100 7500 5100
-Wire Wire Line
-	7500 5100 7500 5200
 $Comp
 L Device:R R26
 U 1 1 612E7DDA
@@ -1061,8 +1057,6 @@ Wire Wire Line
 Wire Wire Line
 	7950 2350 7950 2300
 Connection ~ 7950 2300
-Wire Wire Line
-	8100 4900 7650 4900
 Wire Wire Line
 	7950 2300 8100 2300
 Wire Wire Line
@@ -2020,43 +2014,8 @@ Wire Wire Line
 	8900 3150 9600 3150
 Wire Wire Line
 	9200 5000 9450 5000
-$Comp
-L Device:C C11
-U 1 1 61322CE0
-P 7650 2900
-F 0 "C11" H 7500 3000 50  0000 L CNN
-F 1 "100nF" H 7550 2700 50  0000 L CNN
-F 2 "Capacitor_THT:C_Rect_L7.2mm_W2.5mm_P5.00mm_FKS2_FKP2_MKS2_MKP2" H 7688 2750 50  0001 C CNN
-F 3 "~" H 7650 2900 50  0001 C CNN
-	1    7650 2900
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	7650 3050 7500 3050
-Connection ~ 7500 3050
-Wire Wire Line
-	7500 3050 7500 3100
-$Comp
-L Device:C C17
-U 1 1 6133E7ED
-P 7650 5050
-F 0 "C17" H 7800 5050 50  0000 L CNN
-F 1 "100nF" H 7550 4850 50  0000 L CNN
-F 2 "Capacitor_THT:C_Rect_L7.2mm_W2.5mm_P5.00mm_FKS2_FKP2_MKS2_MKP2" H 7688 4900 50  0001 C CNN
-F 3 "~" H 7650 5050 50  0001 C CNN
-	1    7650 5050
-	1    0    0    -1  
-$EndComp
-Connection ~ 7650 4900
-Wire Wire Line
-	7650 4900 7450 4900
-Wire Wire Line
-	7650 5200 7500 5200
 Wire Wire Line
 	7450 3400 7800 3400
-Connection ~ 7500 5200
-Wire Wire Line
-	7500 5200 7500 5350
 Wire Notes Line
 	2650 6150 2650 7650
 Wire Notes Line
@@ -2341,4 +2300,10 @@ Wire Wire Line
 Wire Wire Line
 	9050 2150 9050 2100
 Connection ~ 8750 2150
+Wire Wire Line
+	7500 2950 7500 3100
+Wire Wire Line
+	7450 4900 8100 4900
+Wire Wire Line
+	7500 5100 7500 5350
 $EndSCHEMATC

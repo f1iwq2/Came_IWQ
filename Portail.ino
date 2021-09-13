@@ -1,5 +1,5 @@
 // *********************************************************
-// portail IWQ carte CAME ZBX6N/7N - Version 11 sept 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 12 sept 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -253,8 +253,8 @@ void Interrupt_T1()
       if (Tps_ctrl_encod<=0) 
       {
         Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
-        if ((abs(PosEncodeur-Anc_Encodeur)<10) & !mode_test)  
-        { // erreur pas de changement de l'encodeur pendant u nmouvement: peut être obstacle!
+        if ((abs(PosEncodeur-Anc_Encodeur)<50) & !mode_test)  
+        { // erreur pas de changement de l'encodeur pendant un nmouvement: peut être obstacle!
           erreur=3;
           Err_enc=HIGH;
           if (avance_cours) demande_recul_imm=HIGH; // sur une avance, on recule sans décélération
