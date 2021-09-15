@@ -1,5 +1,4 @@
-// *********************************************************
-// portail IWQ carte CAME ZBX6N/7N - Version 14 sept 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 15 sept 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -52,7 +51,7 @@
 #define ligne_ES         6  // affichage des E/S
 #define ligne_tpsmax     7  // temps maxi de fonctionnement
 #define ligne_acc        8  // 
-#define ligne_decel      9  // 
+#define ligne_dec        9  // 
 
 
 const String ligne_menu_S[]={"Apprentissage",
@@ -107,8 +106,6 @@ const String ligne_menu_S[]={"Apprentissage",
 #define   rien      7     // A7
 
 #define   Nbre_Max_telecom 20  // nombre maxi de télécommandes 
-#define   Tps_acc       10     // temps d'accélération en dixièmes de s
-#define   Tps_dec       10     // temps de décélération en dixièmes de s
 
 volatile int  erreur,ech,valeur,compsec,Compt10Sec,secondes,nombre,i,compteur_ech,val_secteur[50];
 volatile int  Temps_boutonM,Temps_boutonP,val_tempo,ligne_menu,PosRalenti_ferm,PosRalenti_ouv ;
@@ -116,13 +113,13 @@ volatile int  Nbre_demi_sinus,angle_retard,Temps_boutonE,AncErreur,Aech,Seq,Temp
 volatile int  Tempo_menu,derniere_ligne,premiere_ligne,PageMenu,cpt_mvt,Seq_mvt,attendre,timer;
 volatile int  Nbre_telecom,tempo_affT,Nbit,Protocole,Temps_bornier,Tps_fonctionnement,Tps_fonc_P;
 volatile int  decale,offset,Tps_cellule,Tps_ctrl_encod,cpt_mvt_10,AAAech,AAech;
-volatile int  PosEncodeur,Anc_Encodeur,vitesse,AncPos;
+volatile int  PosEncodeur,Anc_Encodeur,vitesse,AncPos,Tps_accP,Tps_acc,Tps_dec,Tps_decP;
 volatile byte Sens_Ouv,Sens_Ouv_P,PPS,PPS_P,octet,compt_vit,TpsRalenti_ouv,TpsRalenti_ferm;
 volatile bool demande_arret,posOnde,trouveOnde,etatencod,ancetatencod,Fc_ferme,Fc_ouvert,avance,recul ; 
 volatile bool Aferme,Aouvert,simu,recul_cours,avance_cours,posOk,MemRecul,MemAvance,memo_lent ;
 volatile bool dem_inc_boutonM,dem_inc_boutonP,Cellule_ok,ACellule,menu,Anc_BpP,Anc_BpM,Anc_BpE ;
-volatile bool simuMenu,Simu8,Simu2,Enter,m1,m2,m3,m4,m6,m23,Anc_BpEch,Etat_BpP,Etat_BpM,Msg_cell_ok;
-volatile bool dem_inc_boutonE,md2,md3,md6,mode_test,Etat_BpE,Etat_BpEch,dem_cpt_mvt,curseur;
+volatile bool simuMenu,Simu8,Simu2,Enter,m1,m2,m3,m4,m23,Anc_BpEch,Etat_BpP,Etat_BpM,Msg_cell_ok;
+volatile bool dem_inc_boutonE,md2,md3,mode_test,Etat_BpE,Etat_BpEch,dem_cpt_mvt,curseur;
 volatile bool Fm_M,Fm_E,Fm_P,Fm_Ech,Aff_ES,dem_inc_boutonEch,Fm_O,Fm_F,Fd_O,Fd_F,Dem_Telecom;
 volatile bool Dem_Liste_Tel,radio,arrete,Cde_bornier,Fm_Bornier,Abornier,demande_arr_imm;
 volatile bool demande_recul_imm,FmBornier,Man_Bornier,Err_enc;
@@ -155,7 +152,7 @@ void gest_encodeur()
 
 // 4608 / $1200 = 1 génère seconde
 // 1 interruption timer toutes les 217,01388 micro secondes (0.217 ms) (4608 Hz)
-// le signal 100 Hz a une période de 10 ms, soit 10/0,217 = 46 fois de passages dans l'interruption.
+// le signal 100 Hz a une période de 10 ms, soit 10/0,217 = 46 passages dans l'interruption.
 void Interrupt_T1() 
 {
   // lecture tension secteur
@@ -188,10 +185,8 @@ void Interrupt_T1()
       if ( (m2  & (Nbre_demi_sinus>=4)) |   // pour les modes m: toujours RAZ sur un nombre pair car on envoie une sinusoïde complète 1x tous les n
            (m3  & (Nbre_demi_sinus>=6)) |
            (m4  & (Nbre_demi_sinus>=8)) |
-           (m6  & (Nbre_demi_sinus>=12)) |
            (md2 & (Nbre_demi_sinus>=3)) |   // pour les modes md: toujours RAZ sur un nombre impair car on envoie une demi sinusoïde 1x tous les n
            (md3 & (Nbre_demi_sinus>=5)) |
-           (md6 & (Nbre_demi_sinus>=11)) |
            (m23 & (Nbre_demi_sinus>=6)) 
          ) 
       Nbre_demi_sinus=0;       
@@ -214,10 +209,8 @@ void Interrupt_T1()
            (m2 & (Nbre_demi_sinus<2)) | 
            (m3 & (Nbre_demi_sinus<2)) |  
            (m4 & (Nbre_demi_sinus<2)) | 
-           (m6 & (Nbre_demi_sinus<2)) |  
           (md2 & (Nbre_demi_sinus<1)) | 
           (md3 & (Nbre_demi_sinus<1)) | 
-          (md6 & (Nbre_demi_sinus<1)) |
           (m23 & (Nbre_demi_sinus<4)) 
          )
        )
@@ -345,8 +338,8 @@ void ecrit_eprom()
   
   EEPROM.write(6,PosRalenti_ouv >> 8);     // 2 octets
   EEPROM.write(7,PosRalenti_ouv & 0xFF);  
-  EEPROM.write(8,TpsRalenti_ouv);
-  EEPROM.write(9,TpsRalenti_ferm);
+  EEPROM.write(8,Tps_acc);
+  EEPROM.write(9,Tps_dec);
      
   // les codes des télécommandes sont stockées sur 4 octets (long) à partir de l'adresse 10
   for (i=0 ; i<Nbre_telecom ; i++)
@@ -371,8 +364,8 @@ void lit_eprom()
    Tps_fonctionnement=EEPROM.read(3); // temps maximal de fonctionnement
    PosRalenti_ferm=EEPROM.read(4)*256+EEPROM.read(5);    // paramètre sur 2 octets (int)
    PosRalenti_ouv=EEPROM.read(6)*256+EEPROM.read(7);     // paramètre sur 2 octets (int)
-   TpsRalenti_ouv=EEPROM.read(8);           
-   TpsRalenti_ferm=EEPROM.read(9);
+   Tps_acc=EEPROM.read(8);           
+   Tps_dec=EEPROM.read(9);
    
    if (Nbre_telecom>Nbre_Max_telecom) Nbre_telecom=0;
    if ((Sens_Ouv>1) | (Sens_Ouv<0)) Sens_Ouv=1;
@@ -380,7 +373,9 @@ void lit_eprom()
    if ((Tps_fonctionnement>99) | (Tps_fonctionnement<1)) Tps_fonctionnement=99;
    if ((PosRalenti_ouv>32000) | (PosRalenti_ouv<1)) PosRalenti_ouv=1000;
    if ((PosRalenti_ferm>32000) | (PosRalenti_ferm<1)) PosRalenti_ferm=32000;
-   
+   if ((Tps_acc>30) | (Tps_acc<2)) Tps_acc=10;
+   if ((Tps_dec>30) | (Tps_dec<2)) Tps_dec=10;
+     
    // les codes des télécommandes sont stockées en @10 eeprom
    // on peut stocker (1024-10)/4 = 253 télécommandes
    for (i=0 ; i<Nbre_telecom ; i++)
@@ -430,7 +425,7 @@ void setup()
   Serial.println(F("Tapez ? pour l'aide"));
 
   // initialisation de la conversion analogique
-  // nota on ne peut pas utiliser analogRead qui dure 100µS ce qui est beaucoup trop long.
+  // nota: on ne peut pas utiliser analogRead qui dure 100µS ce qui est beaucoup trop long.
   // On utlise donc les convertiseurs de façon asynchrone. (demande de conv et lecture de la valeur plus tard)
   ADMUX |= (1 << REFS0);  // référence de tension interne
   ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); // prédivision à 128
@@ -716,10 +711,8 @@ void mode1()
   m2=LOW;
   m3=LOW;
   m4=LOW;
-  m6=LOW;
   md2=LOW;
   md3=LOW;
-  md6=LOW;
   m23=LOW;
 }
 
@@ -731,10 +724,8 @@ void mode2()
   m2=HIGH;
   m3=LOW;
   m4=LOW;
-  m6=LOW;
   md2=LOW;
   md3=LOW;
-  md6=LOW;
   m23=LOW;
 }
 
@@ -746,40 +737,8 @@ void mode3()
   m2=LOW;
   m3=HIGH;
   m4=LOW;
-  m6=LOW;
   md2=LOW;
   md3=LOW;
-  md6=LOW;
-  m23=LOW;
-}
-
-/*
-// mode 4 : envoi de la sinusoide une fois sur 4 : on arme la gachette 2 fois consécutifs sur 8 à chaque retour à 0 de la sinusoide secteur 
-// la vitesse est de 25%
-void mode4()
-{
-  m1=LOW;
-  m2=LOW;
-  m3=LOW;
-  m4=HIGH;
-  m6=LOW;
-  md2=LOW;
-  md3=LOW;
-  md6=LOW;
-}*/
-
-// mode 6 : envoi de la sinusoide une fois sur 6 : on arme la gachette 2 fois consécutifs sur 12 à chaque retour à 0 de la sinusoide secteur 
-// la vitesse est de 16%
-void mode6()
-{
-  m1=LOW;
-  m2=LOW;
-  m3=LOW;
-  m4=LOW;
-  m6=HIGH;
-  md2=LOW;
-  md3=LOW;
-  md6=LOW;
   m23=LOW;
 }
 
@@ -791,10 +750,8 @@ void moded2()
   m2=LOW;
   m3=LOW;
   m4=LOW;
-  m6=LOW;
   md2=HIGH;
   md3=LOW;
-  md6=LOW;
   m23=LOW;
 }
 
@@ -806,25 +763,8 @@ void moded3()
   m2=LOW;
   m3=LOW;
   m4=LOW;
-  m6=LOW;
   md2=LOW;
   md3=HIGH;
-  md6=LOW;
-  m23=LOW;
-}
-
-// mode demi 6 : envoi d'une demi-sinusoide positive et négative espacées de 6 demi-cycles. 
-// la vitesse est de 16%
-void moded6()
-{
-  m1=LOW;
-  m2=LOW;
-  m3=LOW;
-  m4=LOW;
-  m6=LOW;
-  md2=LOW;
-  md3=LOW;
-  md6=HIGH;
   m23=LOW;
 }
 
@@ -835,10 +775,8 @@ void mode_23()
   m2=LOW;
   m3=LOW;
   m4=LOW;
-  m6=LOW;
   md2=LOW;
   md3=LOW;
-  md6=LOW;
   m23=HIGH;
 }
 
@@ -1089,7 +1027,7 @@ void fond_menu()
     if (i+decale+1==ligne_Param_PPS)  {oled.setCursor(84,i+offset);oled.print(PPS);}
     if (i+decale+1==ligne_tpsmax)     {oled.setCursor(108,i+offset);oled.print(Tps_fonctionnement);}
     if (i+decale+1==ligne_acc)        {oled.setCursor(66,i+offset);oled.print(Tps_acc);}
-    if (i+decale+1==ligne_decel)      {oled.setCursor(66,i+offset);oled.print(Tps_dec);}
+    if (i+decale+1==ligne_dec)        {oled.setCursor(66,i+offset);oled.print(Tps_dec);}
   }    
 }
 
@@ -1297,14 +1235,6 @@ void loop()
   }
   else
 
-  if (chaine==F("md6"))
-  {
-    Serial.println(F("mode D6"));
-    moded6();
-    chaine="";
-  }
-  else
-  
   if (chaine==F("m1"))
   {
     Serial.println(F("mode 1"));
@@ -1337,24 +1267,6 @@ void loop()
   }
   else
 
-  /*
-  if (chaine==F("m4"))
-  {
-    Serial.println(F("mode 4"));
-    mode4();
-    chaine="";
-  }
-  else
-  */
-
-  if (chaine==F("m6"))
-  {
-    Serial.println(F("mode 6"));
-    mode6();
-    chaine="";
-  }
-  else
-  
   if (chaine==F("menu"))
   {
     simuMenu=HIGH;
@@ -1959,17 +1871,98 @@ void loop()
           }  
         } 
       }
-      // paramètre accélération
+      // paramètre temps d'accélération
       if ((ligne_menu==ligne_acc) & (PageMenu==1))     
       {
-       
+        if ((Seq==0) & (Enter | Fm_E))
+        {
+          curseur=LOW;
+          oled.setInvertMode(1);
+          Tps_accP=Tps_acc;            // variable provisoire
+          oled.setCursor(66,coordY());oled.print(Tps_accP);
+          Seq=1;
+          Fm_E=LOW;
+          Enter=LOW;
+        }  
+        if (Seq==1)
+        {
+          if ((Fm_P | Simu2) & (Tps_accP<20)) 
+          {
+            ++Tps_accP;
+            oled.setCursor(66,coordY());oled.print(Tps_accP);
+            Simu2=LOW;
+          }
+          if ((Fm_M | Simu8) & (Tps_acc>2))  
+          {
+            --Tps_accP;
+            oled.setCursor(66,coordY());oled.print(Tps_accP);oled.print(" ");
+            Simu8=LOW;
+          }
+          if (Fm_E | Enter) // validation
+          {
+            Tps_acc=Tps_accP;
+            oled.setInvertMode(0);
+            oled.setCursor(66,coordY());oled.print(Tps_acc);
+            Seq=0;
+            Enter=LOW;
+            curseur=HIGH;
+          }
+          if (Fm_Ech)  // annulation
+          {
+            oled.setInvertMode(0);
+            oled.setCursor(66,coordY());oled.print(Tps_acc);oled.print(" ");
+            Seq=0;
+            Enter=LOW;
+            curseur=HIGH;
+          }  
+        }  
       }
       // paramètre décélération
-      if ((ligne_menu==ligne_acc) & (PageMenu==1))     
+      if ((ligne_menu==ligne_dec) & (PageMenu==1))     
       {
-       
+        if ((Seq==0) & (Enter | Fm_E))
+        {
+          curseur=LOW;
+          oled.setInvertMode(1);
+          Tps_decP=Tps_dec;            // variable provisoire
+          oled.setCursor(66,coordY());oled.print(Tps_decP);
+          Seq=1;
+          Fm_E=LOW;
+          Enter=LOW;
+        }  
+        if (Seq==1)
+        {
+          if ((Fm_P | Simu2) & (Tps_accP<20)) 
+          {
+            ++Tps_decP;
+            oled.setCursor(66,coordY());oled.print(Tps_decP);
+            Simu2=LOW;
+          }
+          if ((Fm_M | Simu8) & (Tps_acc>2))  
+          {
+            --Tps_decP;
+            oled.setCursor(66,coordY());oled.print(Tps_decP);oled.print(" ");
+            Simu8=LOW;
+          }
+          if (Fm_E | Enter) // validation
+          {
+            Tps_dec=Tps_decP;
+            oled.setInvertMode(0);
+            oled.setCursor(66,coordY());oled.print(Tps_dec);
+            Seq=0;
+            Enter=LOW;
+            curseur=HIGH;
+          }
+          if (Fm_Ech)  // annulation
+          {
+            oled.setInvertMode(0);
+            oled.setCursor(66,coordY());oled.print(Tps_dec);oled.print(" ");
+            Seq=0;
+            Enter=LOW;
+            curseur=HIGH;
+          }  
+        }  
       }
-      
     }
    
     // page télécommandes
