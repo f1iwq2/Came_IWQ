@@ -1,4 +1,4 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 15 sept 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 16 sept 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -122,7 +122,7 @@ volatile bool simuMenu,Simu8,Simu2,Enter,m1,m2,m3,m4,m23,Anc_BpEch,Etat_BpP,Etat
 volatile bool dem_inc_boutonE,md2,md3,mode_test,Etat_BpE,Etat_BpEch,dem_cpt_mvt,curseur;
 volatile bool Fm_M,Fm_E,Fm_P,Fm_Ech,Aff_ES,dem_inc_boutonEch,Fm_O,Fm_F,Fd_O,Fd_F,Dem_Telecom;
 volatile bool Dem_Liste_Tel,radio,arrete,Cde_bornier,Fm_Bornier,Abornier,demande_arr_imm;
-volatile bool demande_recul_imm,FmBornier,Man_Bornier,Err_enc;
+volatile bool demande_recul_imm,FmBornier,Man_Bornier,Err_enc,m34;
 volatile bool Msg_cell_nok,Verrou,Fm_Verrou,AVerrou,Fd_Verrou;
 volatile long iteration,Code,telecom[Nbre_Max_telecom];
 char          inByte ;
@@ -187,7 +187,8 @@ void Interrupt_T1()
            (m4  & (Nbre_demi_sinus>=8)) |
            (md2 & (Nbre_demi_sinus>=3)) |   // pour les modes md: toujours RAZ sur un nombre impair car on envoie une demi sinusoïde 1x tous les n
            (md3 & (Nbre_demi_sinus>=5)) |
-           (m23 & (Nbre_demi_sinus>=6)) 
+           (m23 & (Nbre_demi_sinus>=6)) |
+           (m34 & (Nbre_demi_sinus>=8)) 
          ) 
       Nbre_demi_sinus=0;       
     }
@@ -211,7 +212,8 @@ void Interrupt_T1()
            (m4 & (Nbre_demi_sinus<2)) | 
           (md2 & (Nbre_demi_sinus<1)) | 
           (md3 & (Nbre_demi_sinus<1)) | 
-          (m23 & (Nbre_demi_sinus<4)) 
+          (m23 & (Nbre_demi_sinus<4)) |
+          (m34 & (Nbre_demi_sinus<6))
          )
        )
     {
@@ -472,7 +474,7 @@ void setup()
   chaineEnCours="";
   compteur_ech=0;   // valeur courante du compteur d'échantillons
   PosEncodeur=0;    // position de l'encodeur
-  angle_retard=0;   // décalage entre 0 secteur et impulsion gâchette
+  angle_retard=0;   // décalage entre 0 secteur et impulsion gâchette - permet de moduler le couple moteur
   erreur=0;
   AncErreur=0;
   
@@ -714,6 +716,7 @@ void mode1()
   md2=LOW;
   md3=LOW;
   m23=LOW;
+  m34=LOW;
 }
 
 // mode 2 : envoi de la sinusoide une fois sur 2 : on arme la gachette 2 fois consécutifs sur 4 à chaque retour à 0 de la sinusoide secteur 
@@ -727,6 +730,7 @@ void mode2()
   md2=LOW;
   md3=LOW;
   m23=LOW;
+  m34=LOW;
 }
 
 // mode 3 : envoi de la sinusoide une fois sur 3 : on arme la gachette 2 fois consécutifs sur 6 à chaque retour à 0 de la sinusoide secteur 
@@ -740,6 +744,7 @@ void mode3()
   md2=LOW;
   md3=LOW;
   m23=LOW;
+  m34=LOW;
 }
 
 // mode demi 2 : envoi d'une demi-sinusoide positive et négative espacées de 2 demi-cycles. 
@@ -753,6 +758,7 @@ void moded2()
   md2=HIGH;
   md3=LOW;
   m23=LOW;
+  m34=LOW;
 }
 
 // mode demi 3 : envoi d'une demi-sinusoide positive et négative espacées de 4 demi-cycles. 
@@ -766,9 +772,11 @@ void moded3()
   md2=LOW;
   md3=HIGH;
   m23=LOW;
+  m34=LOW;
 }
 
 // mode 2/3 (2 sinusoides sur 3)
+// la vitesse est de 66%
 void mode_23()
 {
   m1=LOW;
@@ -778,6 +786,21 @@ void mode_23()
   md2=LOW;
   md3=LOW;
   m23=HIGH;
+  m34=LOW;
+}
+
+// mode 3/4 (3 sinusoides sur 4)
+// la vitesse est de 75%
+void mode_34()
+{
+  m1=LOW;
+  m2=LOW;
+  m3=LOW;
+  m4=LOW;
+  md2=LOW;
+  md3=LOW;
+  m23=LOW;
+  m34=HIGH;
 }
 
 void avance_rapide()
@@ -895,7 +918,7 @@ void avance_lente()
      if (!memo_lent & avance_cours)
      {
         // on vient de GV vers PV: passer en mode 2/3
-        mode_23();
+        mode_23();  // mode_34();
         tempo(7);
       }
       mode2();                // vitesse lente
@@ -939,7 +962,7 @@ void recul_lent()
     if (!memo_lent & recul_cours)
     {
       // on vient de GV vers PV: passer en mode 2/3
-      mode_23();
+      mode_23();   //mode_34();
       tempo(7);
     }
     mode2();                   // vitesse lente
@@ -1258,6 +1281,15 @@ void loop()
     chaine="";
   }
   else
+
+  if (chaine==F("m34"))
+  {
+    Serial.println(F("mode 34"));
+    mode_34();
+    chaine="";
+  }
+  else
+  
   
   if (chaine==F("m3"))
   {
