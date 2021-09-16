@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source "C:\\Users\\moua\\Documents\\portail_jc V2.0\\portail_jc.sch")
-    (date "13/09/2021 09:50:37")
+    (date "16/09/2021 17:03:01")
     (tool "Eeschema (5.1.10)-1")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
