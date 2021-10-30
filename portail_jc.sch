@@ -5,8 +5,8 @@ $Descr A4 11693 8268
 encoding utf-8
 Sheet 1 2
 Title "Clone de carte CAME BZX6N-7N"
-Date "10/09/2021"
-Rev "2.0"
+Date "30/10/2021"
+Rev "2.1"
 Comp "F1IWQ"
 Comment1 ""
 Comment2 ""
@@ -118,24 +118,24 @@ F
 $Comp
 L Connector:Screw_Terminal_01x02 J6
 U 1 1 611361CB
-P 9550 4700
-F 0 "J6" V 9550 4500 50  0000 R CNN
-F 1 "Screw_Terminal_01x02" V 9550 5650 50  0000 R CNN
-F 2 "TerminalBlock:TerminalBlock_bornier-2_P5.08mm" H 9550 4700 50  0001 C CNN
-F 3 "~" H 9550 4700 50  0001 C CNN
-	1    9550 4700
+P 9550 4600
+F 0 "J6" V 9550 4400 50  0000 R CNN
+F 1 "Screw_Terminal_01x02" V 9550 5550 50  0000 R CNN
+F 2 "TerminalBlock:TerminalBlock_bornier-2_P5.08mm" H 9550 4600 50  0001 C CNN
+F 3 "~" H 9550 4600 50  0001 C CNN
+	1    9550 4600
 	0    1    -1   0   
 $EndComp
 NoConn ~ 5800 1450
 $Comp
 L power:GND #PWR02
 U 1 1 611578AD
-P 9550 5150
-F 0 "#PWR02" H 9550 4900 50  0001 C CNN
-F 1 "GND" H 9555 4977 50  0000 C CNN
-F 2 "" H 9550 5150 50  0001 C CNN
-F 3 "" H 9550 5150 50  0001 C CNN
-	1    9550 5150
+P 9550 5050
+F 0 "#PWR02" H 9550 4800 50  0001 C CNN
+F 1 "GND" H 9555 4877 50  0000 C CNN
+F 2 "" H 9550 5050 50  0001 C CNN
+F 3 "" H 9550 5050 50  0001 C CNN
+	1    9550 5050
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -359,7 +359,7 @@ F 3 "" H 4000 3700 50  0001 C CNN
 $EndComp
 Text Notes 7850 800  0    59   ~ 0
 Fins de course
-Text Notes 9500 4600 0    59   ~ 0
+Text Notes 8900 4650 0    59   ~ 0
 Antenne
 $Comp
 L power:PWR_FLAG #FLG0102
@@ -524,41 +524,39 @@ Text Notes 9050 2850 0    50   ~ 0
 Ouvert
 Text Notes 9050 2950 0    50   ~ 0
 Fermé
-Text Notes 9900 6400 2    59   ~ 0
+Text Notes 10100 6300 2    59   ~ 0
    Récepteur\ntélécommande\n   433 MHz
-Wire Wire Line
-	9000 5900 9000 6050
 $Comp
 L power:GND #PWR017
 U 1 1 61132DB6
-P 9000 6050
-F 0 "#PWR017" H 9000 5800 50  0001 C CNN
-F 1 "GND" H 9005 5877 50  0000 C CNN
-F 2 "" H 9000 6050 50  0001 C CNN
-F 3 "" H 9000 6050 50  0001 C CNN
-	1    9000 6050
+P 9000 6300
+F 0 "#PWR017" H 9000 6050 50  0001 C CNN
+F 1 "GND" H 9150 6250 50  0000 C CNN
+F 2 "" H 9000 6300 50  0001 C CNN
+F 3 "" H 9000 6300 50  0001 C CNN
+	1    9000 6300
 	1    0    0    -1  
 $EndComp
 $Comp
 L power:+5V #PWR016
 U 1 1 6113E36B
-P 9000 5550
-F 0 "#PWR016" H 9000 5400 50  0001 C CNN
-F 1 "+5V" H 9015 5723 50  0000 C CNN
-F 2 "" H 9000 5550 50  0001 C CNN
-F 3 "" H 9000 5550 50  0001 C CNN
-	1    9000 5550
+P 9000 5450
+F 0 "#PWR016" H 9000 5300 50  0001 C CNN
+F 1 "+5V" H 9015 5623 50  0000 C CNN
+F 2 "" H 9000 5450 50  0001 C CNN
+F 3 "" H 9000 5450 50  0001 C CNN
+	1    9000 5450
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9000 5550 9000 5600
-Text Label 9200 5800 0    50   ~ 0
+	9000 5450 9000 5500
+Text Label 9250 5700 0    50   ~ 0
 DATA
 Text Notes 9100 3700 0    50   ~ 0
 led intégrée
 Wire Wire Line
 	9600 2550 8900 2550
-Text Notes 9950 6400 0    59   ~ 0
+Text Notes 10250 6300 0    59   ~ 0
 TDCA RX500A\nCHJ-9921\nRXB6
 Wire Wire Line
 	10600 3350 11100 3350
@@ -763,16 +761,16 @@ $EndComp
 $Comp
 L Connector_Generic:Conn_01x01 J9
 U 1 1 6151FF69
-P 9000 5000
-F 0 "J9" H 9080 4992 50  0000 L CNN
-F 1 "Conn_01x04" H 8800 4850 50  0000 L CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical" H 9000 5000 50  0001 C CNN
-F 3 "~" H 9000 5000 50  0001 C CNN
-	1    9000 5000
+P 9000 4900
+F 0 "J9" H 9080 4892 50  0000 L CNN
+F 1 "Conn_01x04" H 8800 4750 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical" H 9000 4900 50  0001 C CNN
+F 3 "~" H 9000 4900 50  0001 C CNN
+	1    9000 4900
 	-1   0    0    1   
 $EndComp
 Wire Wire Line
-	9450 5000 9450 4900
+	9450 4900 9450 4800
 Wire Wire Line
 	8850 2750 9600 2750
 Wire Wire Line
@@ -1194,8 +1192,6 @@ F 3 "~" H 3000 6700 50  0001 C CNN
 	1    3000 6700
 	1    0    0    -1  
 $EndComp
-Text Notes 3250 6500 0    59   ~ 0
-Trous de montage
 Wire Wire Line
 	1750 7100 1600 7100
 Wire Wire Line
@@ -1357,15 +1353,15 @@ Connection ~ 5850 6800
 $Comp
 L Device:C C7
 U 1 1 611A407B
-P 9000 5750
-F 0 "C7" H 8850 5850 50  0000 L CNN
-F 1 "100nF" H 8750 5650 50  0000 L CNN
-F 2 "Capacitor_THT:C_Rect_L7.2mm_W2.5mm_P5.00mm_FKS2_FKP2_MKS2_MKP2" H 9038 5600 50  0001 C CNN
-F 3 "~" H 9000 5750 50  0001 C CNN
-	1    9000 5750
+P 9000 5650
+F 0 "C7" H 8850 5750 50  0000 L CNN
+F 1 "100nF" H 8750 5550 50  0000 L CNN
+F 2 "Capacitor_THT:C_Rect_L7.2mm_W2.5mm_P5.00mm_FKS2_FKP2_MKS2_MKP2" H 9038 5500 50  0001 C CNN
+F 3 "~" H 9000 5650 50  0001 C CNN
+	1    9000 5650
 	1    0    0    -1  
 $EndComp
-Connection ~ 9000 5600
+Connection ~ 9000 5500
 $Comp
 L Device:C C8
 U 1 1 6121E52E
@@ -1513,7 +1509,7 @@ Text Notes 5200 6500 0    50   ~ 0
 Numérisation de la sinusoïde\n        du secteur
 Text GLabel 9750 1600 2    50   Input ~ 0
 24V
-Text Notes 5050 5550 2    50   ~ 0
+Text Notes 5300 5700 2    50   ~ 0
 24V Ac
 Wire Wire Line
 	6400 6800 6600 6800
@@ -1631,17 +1627,17 @@ F 3 "~" H 3800 7500 50  0001 C CNN
 $EndComp
 Wire Notes Line
 	2650 6350 4550 6350
-Text Notes 10050 6050 0    50   ~ 0
+Text Notes 10050 5950 0    50   ~ 0
 connecteurs femelle
 $Comp
 L Connector_Generic:Conn_01x04 J8
 U 1 1 6112687D
-P 10700 5800
-F 0 "J8" H 10780 5792 50  0000 L CNN
-F 1 "Conn_01x04" H 10450 5450 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 10700 5800 50  0001 C CNN
-F 3 "~" H 10700 5800 50  0001 C CNN
-	1    10700 5800
+P 10700 5700
+F 0 "J8" H 10780 5692 50  0000 L CNN
+F 1 "Conn_01x04" H 10450 5350 50  0000 L CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 10700 5700 50  0001 C CNN
+F 3 "~" H 10700 5700 50  0001 C CNN
+	1    10700 5700
 	1    0    0    1   
 $EndComp
 $Comp
@@ -1807,16 +1803,16 @@ Wire Wire Line
 $Comp
 L Device:R R38
 U 1 1 612CC0F5
-P 9700 5800
-F 0 "R38" V 9600 5950 50  0000 C CNN
-F 1 "1,2k" V 9600 5700 50  0000 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 9630 5800 50  0001 C CNN
-F 3 "~" H 9700 5800 50  0001 C CNN
-	1    9700 5800
+P 9700 5700
+F 0 "R38" V 9600 5850 50  0000 C CNN
+F 1 "1,2k" V 9600 5600 50  0000 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 9630 5700 50  0001 C CNN
+F 3 "~" H 9700 5700 50  0001 C CNN
+	1    9700 5700
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	9000 5600 10250 5600
+	9000 5500 10250 5500
 Wire Notes Line
 	8700 4450 10950 4450
 Wire Notes Line
@@ -1946,63 +1942,58 @@ ouvert
 $Comp
 L Connector_Generic:Conn_01x04 J11
 U 1 1 612AA2D1
-P 10700 5200
-F 0 "J11" H 10780 5192 50  0000 L CNN
-F 1 "Conn_01x04" H 10450 4850 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 10700 5200 50  0001 C CNN
-F 3 "~" H 10700 5200 50  0001 C CNN
-	1    10700 5200
+P 10700 5100
+F 0 "J11" H 10780 5092 50  0000 L CNN
+F 1 "Conn_01x04" H 10450 4750 50  0000 L CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 10700 5100 50  0001 C CNN
+F 3 "~" H 10700 5100 50  0001 C CNN
+	1    10700 5100
 	1    0    0    1   
 $EndComp
 Wire Wire Line
-	10500 5300 10250 5300
+	10500 5200 10250 5200
 Wire Wire Line
-	10250 5300 10250 5600
-Connection ~ 10250 5600
+	10250 5200 10250 5500
+Connection ~ 10250 5500
 Wire Wire Line
-	10250 5600 10500 5600
+	10250 5500 10500 5500
 Wire Wire Line
-	9850 5800 10500 5800
-Wire Wire Line
-	9550 5800 9200 5800
-Connection ~ 9000 5900
-Wire Wire Line
-	9000 5900 10500 5900
-Wire Wire Line
-	10500 5200 10000 5200
+	9850 5700 10500 5700
 Wire Wire Line
 	10500 5100 10000 5100
 Wire Wire Line
-	10000 5100 10000 5200
+	10500 5000 10000 5000
 Wire Wire Line
-	10000 5200 10000 5300
-Connection ~ 10000 5200
+	10000 5000 10000 5100
+Wire Wire Line
+	10000 5100 10000 5200
+Connection ~ 10000 5100
 $Comp
 L power:GND #PWR020
 U 1 1 6137DFF0
-P 10000 5300
-F 0 "#PWR020" H 10000 5050 50  0001 C CNN
-F 1 "GND" H 10005 5127 50  0000 C CNN
-F 2 "" H 10000 5300 50  0001 C CNN
-F 3 "" H 10000 5300 50  0001 C CNN
-	1    10000 5300
+P 10000 5200
+F 0 "#PWR020" H 10000 4950 50  0001 C CNN
+F 1 "GND" H 10005 5027 50  0000 C CNN
+F 2 "" H 10000 5200 50  0001 C CNN
+F 3 "" H 10000 5200 50  0001 C CNN
+	1    10000 5200
 	1    0    0    -1  
 $EndComp
-Connection ~ 9450 5000
-Text Notes 9900 5000 0    50   ~ 0
+Connection ~ 9450 4900
+Text Notes 9900 4900 0    50   ~ 0
 ANT
 Wire Notes Line
 	10950 4450 10950 6450
 Wire Notes Line
 	8700 4450 8700 6450
 Wire Wire Line
-	9450 5000 10500 5000
+	9450 4900 10500 4900
 Wire Wire Line
-	9550 4900 9550 5150
+	9550 4800 9550 5050
 Wire Wire Line
-	10500 5700 10150 5700
-NoConn ~ 10150 5700
-Text Label 10250 5700 0    50   ~ 0
+	10500 5600 10150 5600
+NoConn ~ 10150 5600
+Text Label 10250 5600 0    50   ~ 0
 ERR
 Wire Wire Line
 	8850 2650 9600 2650
@@ -2011,7 +2002,7 @@ Wire Wire Line
 Wire Wire Line
 	8900 3150 9600 3150
 Wire Wire Line
-	9200 5000 9450 5000
+	9200 4900 9450 4900
 Wire Wire Line
 	7450 3400 7800 3400
 $Comp
@@ -2306,4 +2297,53 @@ Wire Notes Line
 	2650 7650 2650 6350
 Text Notes 6900 5350 0    50   ~ 0
 ACPL-844 ou\n4xSFH620
+$Comp
+L Device:R R41
+U 1 1 617EF2DC
+P 9250 6050
+F 0 "R41" H 9100 6050 50  0000 C CNN
+F 1 "47k" H 9100 5950 50  0000 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 9180 6050 50  0001 C CNN
+F 3 "~" H 9250 6050 50  0001 C CNN
+	1    9250 6050
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	9250 6250 9000 6250
+Wire Wire Line
+	9000 6250 9000 6300
+Connection ~ 9000 6250
+Wire Wire Line
+	9250 5700 9550 5700
+Wire Wire Line
+	9250 6200 9250 6250
+Wire Wire Line
+	9000 5800 10500 5800
+Wire Wire Line
+	9000 5800 9000 6250
+Connection ~ 9000 5800
+Wire Wire Line
+	9250 5700 9250 5900
+$Comp
+L Mechanical:Fiducial FID1
+U 1 1 617F0846
+P 3000 6500
+F 0 "FID1" H 3085 6546 50  0000 L CNN
+F 1 "Fiducial" H 3085 6455 50  0000 L CNN
+F 2 "Symbol:KiCad-Logo2_6mm_SilkScreen" H 3000 6500 50  0001 C CNN
+F 3 "~" H 3000 6500 50  0001 C CNN
+	1    3000 6500
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:Fiducial FID2
+U 1 1 617F2FD0
+P 3800 6500
+F 0 "FID2" H 3885 6546 50  0000 L CNN
+F 1 "Fiducial" H 3885 6455 50  0000 L CNN
+F 2 "Symbol:OSHW-Logo2_9.8x8mm_SilkScreen" H 3800 6500 50  0001 C CNN
+F 3 "~" H 3800 6500 50  0001 C CNN
+	1    3800 6500
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

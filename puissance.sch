@@ -5,8 +5,8 @@ $Descr A4 11693 8268
 encoding utf-8
 Sheet 2 2
 Title "Clone de carte CAME BZX6N-7N"
-Date "10/09/2021"
-Rev "2.0"
+Date "30/10/2021"
+Rev "2.1"
 Comp ""
 Comment1 ""
 Comment2 ""
