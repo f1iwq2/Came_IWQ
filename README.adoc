@@ -12,4 +12,5 @@ Documents in pdf files
 Kicad board schematics files
 gerber files in trace directory
 
-![Screenshot](clone_came.jpg)
+image::clone_came.jpg[]
+
