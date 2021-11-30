@@ -1,4 +1,4 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 17 sept 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 30 sept 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -11,7 +11,7 @@
 // ----------------------------------------------------------------------------------
 // en V2 : l'encodeur est traité par l'IRQ matérielle, encod sur pin D3
 // ----------------------------------------------------------------------------------
-// 1 tour programme principal (main) dure en moyenne 800 à 850µS
+// 1 tour programme principal (main) dure en moyenne 800 à 850µs
 //
 #define V1   // carte V1.0 ou V2.0
 
@@ -123,7 +123,7 @@ volatile bool dem_inc_boutonE,md2,md3,mode_test,Etat_BpE,Etat_BpEch,dem_cpt_mvt,
 volatile bool Fm_M,Fm_E,Fm_P,Fm_Ech,Aff_ES,dem_inc_boutonEch,Fm_O,Fm_F,Fd_O,Fd_F,Dem_Telecom;
 volatile bool Dem_Liste_Tel,radio,arrete,Cde_bornier,Fm_Bornier,Abornier,demande_arr_imm;
 volatile bool demande_recul_imm,FmBornier,Man_Bornier,Err_enc,m34;
-volatile bool Msg_cell_nok,Verrou,Fm_Verrou,AVerrou,Fd_Verrou;
+volatile bool Msg_cell_nok,Verrou,Fm_Verrou,AVerrou,Fd_Verrou,msgVerr;
 volatile long iteration,Code,telecom[Nbre_Max_telecom];
 char          inByte ;
 String        s,chaine,vide,chaineEnCours ;
@@ -185,7 +185,7 @@ void Interrupt_T1()
       if ( (m2  & (Nbre_demi_sinus>=4)) |   // pour les modes m: toujours RAZ sur un nombre pair car on envoie une sinusoïde complète 1x tous les n
            (m3  & (Nbre_demi_sinus>=6)) |
            (m4  & (Nbre_demi_sinus>=8)) |
-           (md2 & (Nbre_demi_sinus>=3)) |   // pour les modes md: toujours RAZ sur un nombre impair car on envoie une demi sinusoïde 1x tous les n
+           (md2 & (Nbre_demi_sinus>=3)) |   // pour les modes md: toujours RAZ sur un nombre impair car on envoie une demi sinusoïde m sur n
            (md3 & (Nbre_demi_sinus>=5)) |
            (m23 & (Nbre_demi_sinus>=6)) |
            (m34 & (Nbre_demi_sinus>=8)) 
@@ -204,9 +204,9 @@ void Interrupt_T1()
     }
   
     // pilotage de la pin VAR à 1 si pas arrêté
-    if ( !arrete & (compteur_ech>=angle_retard) & (compteur_ech<angle_retard+10) & // +10 détermine la largeur du créneau envoyé  la gachette
+    if ( !arrete & (compteur_ech>=angle_retard) & (compteur_ech<angle_retard+10) & // +10 détermine la largeur du créneau envoyé à la gachette
          ( 
-           m1 | 
+            m1 | 
            (m2 & (Nbre_demi_sinus<2)) | 
            (m3 & (Nbre_demi_sinus<2)) |  
            (m4 & (Nbre_demi_sinus<2)) | 
@@ -220,7 +220,7 @@ void Interrupt_T1()
      digitalWrite(Var,1);
      digitalWrite(led,1);
     }    
-    // si on ne dépasse pas la consigne, on pilote la sortie PWM
+    // si on dépasse la consigne, on ne pilote pas la sortie gachette "var"
     else 
     {
       digitalWrite(Var,0);  
@@ -237,7 +237,7 @@ void Interrupt_T1()
   if (dem_inc_boutonE) ++Temps_boutonE;
   if (dem_inc_boutonEch) ++Temps_boutonEch;
 
-  // 1/10 seconde
+  // séquenceur 1/10 seconde---------------
   if (Compt10Sec>=460)
   {
     Compt10Sec=0;
@@ -251,7 +251,7 @@ void Interrupt_T1()
       {
         Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
         if ((abs(PosEncodeur-Anc_Encodeur)<50) & !mode_test)  
-        { // erreur pas de changement de l'encodeur pendant un nmouvement: peut être obstacle!
+        { // erreur pas de changement de l'encodeur pendant un mouvement: peut être obstacle!
           erreur=3;
           Err_enc=HIGH;
           if (avance_cours) demande_recul_imm=HIGH; // sur une avance, on recule sans décélération
@@ -416,7 +416,6 @@ void setup()
   pinMode(FcOuvert,INPUT);
   pinMode(Cellule,INPUT);
   pinMode(encod,INPUT);
-   
   pinMode(BpP,INPUT);
   pinMode(BpM,INPUT);
   pinMode(BpE,INPUT);
@@ -442,22 +441,25 @@ void setup()
   // I2C pour oled
   Wire.begin();
   Wire.setClock(400000L);
-
+  Serial.println("I2C ok");
+ 
   // oled sans reset ------------------------------
   #if RST_PIN >= 0
    oled.begin(&Adafruit128x64,I2C_ADDRESS,RST_PIN);
   #else // RST_PIN >= 0
     oled.begin(&Adafruit128x64,I2C_ADDRESS);
   #endif // RST_PIN >= 0
-
+  Serial.println("Oled ok");
+  
   Ecran_base();
   
   // rx 433 MHz -------------------------
   Rx.enableReceive(digitalPinToInterrupt(data));  // On reçoit la télécommande sur INT0 (data=pin D2)
+  Serial.println("Rx ok");
   
   // IRQ encodeur --------------------------------
   #ifdef V1
-  //en V1 association de l'IRQ sur portB.0=D8=encodeur
+  //en V1 association de l'IRQ sur portB.D8=encodeur
   PCICR|=0x01;  // changement du portB
   PCMSK0|=0x01; // portB.0
   PCIFR|=0x01;  // PCIF0
@@ -465,9 +467,10 @@ void setup()
   #endif
   
   #ifdef V2
-  //en V2 association de l'IRQ INT1 sur portB.0=D3=encodeur
+  //en V2 association de l'IRQ INT1 sur portB.D3=encodeur
   attachInterrupt(digitalPinToInterrupt(encod),gest_encodeur,CHANGE);
   #endif
+  Serial.println("IRQ ok");
   
   // Initialisation des variables
   chaine="";
@@ -559,24 +562,22 @@ void traitement()
   // recul immédiat
   if (demande_recul_imm)
   {
+    demande_recul_imm=LOW;
     s=F("Recul immediat ");
     Serial.println(s); 
     oled.setCursor(0,2);oled.print(s);
-    
     arret();
-    recul_lent();
-    demande_recul_imm=LOW;
+    recul_lent();  
   }
   
   // arret immédiat (sans décélération)
   if (demande_arr_imm) 
   {
+    demande_arr_imm=LOW;
     s=F("Arret immediat ");
     Serial.println(s); 
     oled.setCursor(0,2);oled.print(s);
-    
     arret();
-    demande_arr_imm=LOW;
   }
 
   if ( (Fd_F & recul_cours)  | (Fd_O & avance_cours) ) Seq_mvt=0; // début de la séquence d'un mouvement complet de Fc à Fc pour le comptage temps maxi
@@ -684,7 +685,7 @@ void traitement()
           s=F(" OK");
           oled.print(s);
           Serial.println(s);
-          radio=!menu;  // envoyer l'ordre de manoeuvre
+          radio=!menu;  // envoyer l'ordre de manoeuvre sauf si on est en mode menu
         } 
         else Serial.println(); 
       }    
@@ -876,6 +877,7 @@ void recul_rapide()
       oled.setCursor(0,2);oled.println(s);
       Serial.println(s);
       mode1();                // vitesse rapide
+      angle_retard=0;
       digitalWrite(R2,HIGH);  // R2 à 1 (N sur W et éclairage)
       if (Sens_Ouv==1)
       {
@@ -915,6 +917,7 @@ void avance_lente()
       s=F("Avance lente    ");
       oled.setCursor(0,2);oled.println(s);
       Serial.println(s);
+     
      if (!memo_lent & avance_cours)
      {
         // on vient de GV vers PV: passer en mode 2/3
@@ -922,6 +925,7 @@ void avance_lente()
         tempo(7);
       }
       mode2();                // vitesse lente
+      //angle_retard=20;
       digitalWrite(R2,HIGH);  // R2 à 1 (N sur W et éclairage)
       tempo(2);               // évite de coller 2 relais simultanément
       if (Sens_Ouv==1)
@@ -966,6 +970,7 @@ void recul_lent()
       tempo(7);
     }
     mode2();                   // vitesse lente
+    //angle_retard=20;
     digitalWrite(R2,HIGH);     // R2 à 1 (N sur W et éclairage)
     tempo(2);                  // évite de coller 2 relais simultanément
     if (Sens_Ouv==1)
@@ -1172,9 +1177,10 @@ void loop()
       oled.setCursor(0,4);oled.println(vide);
     }
 
-    if (Fm_Verrou)
+    if (Fm_Verrou | msgVerr)
     {
       s=F("Portail verrouille ");
+      msgVerr=LOW;
       Serial.println(s);
       oled.setInvertMode(1);
       oled.setCursor(0,4);oled.println(s);
@@ -1559,6 +1565,8 @@ void loop()
       PageMenu=0;
       Tempo_menu=0;   // figeage à 0 de la tempo menu
       Ecran_base();
+      msgVerr=Verrou;  // provoque le message verrouillage si verrouillé
+      
     }
 
     // descente curseur
