@@ -1,4 +1,4 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 30 sept 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 03 dec 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -13,7 +13,7 @@
 // ----------------------------------------------------------------------------------
 // 1 tour programme principal (main) dure en moyenne 800 à 850µs
 //
-#define V1   // carte V1.0 ou V2.0
+#define V2   // carte V1.0 ou V2.0
 
 #include <TimerOne.h>
 #include <EEPROM.h>
@@ -122,7 +122,7 @@ volatile bool simuMenu,Simu8,Simu2,Enter,m1,m2,m3,m4,m23,Anc_BpEch,Etat_BpP,Etat
 volatile bool dem_inc_boutonE,md2,md3,mode_test,Etat_BpE,Etat_BpEch,dem_cpt_mvt,curseur;
 volatile bool Fm_M,Fm_E,Fm_P,Fm_Ech,Aff_ES,dem_inc_boutonEch,Fm_O,Fm_F,Fd_O,Fd_F,Dem_Telecom;
 volatile bool Dem_Liste_Tel,radio,arrete,Cde_bornier,Fm_Bornier,Abornier,demande_arr_imm;
-volatile bool demande_recul_imm,FmBornier,Man_Bornier,Err_enc,m34;
+volatile bool demande_recul_imm,FmBornier,Man_Bornier,Err_enc,m34,mode_temps;
 volatile bool Msg_cell_nok,Verrou,Fm_Verrou,AVerrou,Fd_Verrou,msgVerr;
 volatile long iteration,Code,telecom[Nbre_Max_telecom];
 char          inByte ;
@@ -244,27 +244,30 @@ void Interrupt_T1()
 
     if (dem_cpt_mvt) ++cpt_mvt_10; else cpt_mvt_10=0;  // compteur mvt en 1/10 de s
     // vérification de l'encodeur----------------------
-    if ((avance_cours | recul_cours) & (cpt_mvt_10>5)) // contrôle de l'encodeur après 0,5s de mouvement (pour l'accélération)
+    if (!mode_test & !mode_temps)  // si mode_test=1 ou mode_temps=1, on ne vérifie pas l'encodeur
     {
-      --Tps_ctrl_encod;
-      if (Tps_ctrl_encod<=0) 
+      if ( (avance_cours | recul_cours) & (cpt_mvt_10>5) ) // contrôle de l'encodeur après 0,5s de mouvement (pour l'accélération)
       {
-        Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
-        if ((abs(PosEncodeur-Anc_Encodeur)<50) & !mode_test)  
-        { // erreur pas de changement de l'encodeur pendant un mouvement: peut être obstacle!
-          erreur=3;
-          Err_enc=HIGH;
-          if (avance_cours) demande_recul_imm=HIGH; // sur une avance, on recule sans décélération
-          else demande_arr_imm=HIGH;                // sur un recul, on arrete sans décélération
-        }   
-        else 
+        --Tps_ctrl_encod;
+        if (Tps_ctrl_encod<=0) 
         {
-          Err_enc=LOW;
-          if (erreur==3) {erreur=0;}  
-        }
+          Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
+          if ((abs(PosEncodeur-Anc_Encodeur)<50))  
+          { // erreur pas de changement de l'encodeur pendant un mouvement: peut être obstacle!
+            erreur=3;
+            Err_enc=HIGH;
+            if (avance_cours) demande_recul_imm=HIGH; // sur une avance, on recule sans décélération
+            else demande_arr_imm=HIGH;                // sur un recul, on arrete sans décélération
+          }   
+          else 
+          {
+            Err_enc=LOW;
+            if (erreur==3) {erreur=0;}  
+          }
         Anc_Encodeur=PosEncodeur;
-      }
-    }     
+        }
+      }     
+    }  
     
     // vitesse du portail: mesure toutes les 0,3 s
     ++compt_vit;
@@ -488,6 +491,7 @@ void setup()
   Cellule_ok=HIGH;  // provoque le message cellule coupée au démarrage si la cellule est coupée
   Tps_cellule=1;    // "
   mode_test=LOW;    // permet d'utiliser GV même si position inconnue ou encodeur muet ; attention aux chocs en fin de parcours!!!
+  mode_temps=LOW;   // le mode temps utilise un comptage temporel plutot que l'encodeur pour les commutations GV/PV
   posOk=mode_test;  // position connue encodeur
   mode2();          // vitesse mode 1=PV
   vide=F("                     ");
@@ -613,7 +617,10 @@ void traitement()
     }
     
     // passer en pv
-    if (posOk & (PosEncodeur>PosRalenti_ferm) & (memo_lent==LOW))
+    if (
+         (posOk & (PosEncodeur>PosRalenti_ferm) & !memo_lent & !mode_test & !mode_temps) |
+         (mode_temps & (cpt_mvt>15))  // à ajuster manuellement
+       )  
     {
       Serial.println(F("Position lente vers avance atteinte"));
       avance_lente();
@@ -641,11 +648,15 @@ void traitement()
     }
     
     // passer en PV
-    if (posOk & (PosEncodeur<PosRalenti_ouv) & (memo_lent==LOW) & !mode_test)
+    if ( 
+         (posOk & (PosEncodeur<PosRalenti_ouv) & !memo_lent & !mode_test & !mode_temps) |
+         (mode_temps & (cpt_mvt>15))  // à ajuster manuellement
+       ) 
     {
       Serial.println(F("Position lente vers recul atteinte"));
       recul_lent();
     }
+    
   }
 
   // récepteur radio ----------------------------------------------------
