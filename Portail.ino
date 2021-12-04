@@ -1,4 +1,4 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 03 dec 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 04 dec 2021
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -619,7 +619,7 @@ void traitement()
     // passer en pv
     if (
          (posOk & (PosEncodeur>PosRalenti_ferm) & !memo_lent & !mode_test & !mode_temps) |
-         (mode_temps & (cpt_mvt>15))  // à ajuster manuellement
+         (mode_temps & (cpt_mvt>15) & !memo_lent)  // à ajuster manuellement
        )  
     {
       Serial.println(F("Position lente vers avance atteinte"));
@@ -650,7 +650,7 @@ void traitement()
     // passer en PV
     if ( 
          (posOk & (PosEncodeur<PosRalenti_ouv) & !memo_lent & !mode_test & !mode_temps) |
-         (mode_temps & (cpt_mvt>15))  // à ajuster manuellement
+         (mode_temps & (cpt_mvt>15) & !memo_lent)  // à ajuster manuellement
        ) 
     {
       Serial.println(F("Position lente vers recul atteinte"));
