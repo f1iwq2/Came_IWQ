@@ -835,7 +835,7 @@ void avance_rapide()
         tempo(Tps_acc);
       }
 
-      if (posOk)  // si position connue encodeur, on avance en rapide
+      if (posOk | mode_temps)  // si position connue encodeur ou mode temps, on avance en rapide
       {
         s=F("Avance rapide   ");
         oled.setCursor(0,2);oled.println(s);
@@ -882,7 +882,7 @@ void recul_rapide()
       tempo(Tps_acc);       // 1s  
     }
 
-    if (posOk)  // si position connue encodeur, on recule en rapide
+    if (posOk | mode_temps)  // si position connue encodeur ou mode temps, on recule en rapide
     {
       s=F("Recul rapide    ");
       oled.setCursor(0,2);oled.println(s);
