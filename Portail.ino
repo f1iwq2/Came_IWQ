@@ -1,9 +1,9 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 04 dec 2021
+// portail IWQ carte CAME ZBX6N/7N - Version 24 06 2022 11h
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
 // pour la compilation et le téléchargement, sélectionner arduino NANO sinon le téléchargement ne fonctionnera pas.
-// Ne pas utiliser la fonction Delay(). Utiliser Tempo().
+// Ne pas utiliser Tempo() dans la fonction traitement() ni dans les fonctions à l'intérieur à savoir recul_lent() et avance_lent() mais delay.
 // L'origine 0 de l'encodeur est en position reculée (Fc arrière)=portail ouvert
 // *********************************************************
 // Compilation pour la carte V1.0 ou V2.0
@@ -13,7 +13,8 @@
 // ----------------------------------------------------------------------------------
 // 1 tour programme principal (main) dure en moyenne 800 à 850µs
 //
-#define V2   // carte V1.0 ou V2.0
+#define V1   // carte V1.0 ou V2.0
+//#define modes_etendus  // modes de pilotage supplémentaires du moteur. Uniquement pour test
 
 #include <TimerOne.h>
 #include <EEPROM.h>
@@ -246,13 +247,13 @@ void Interrupt_T1()
     // vérification de l'encodeur----------------------
     if (!mode_test & !mode_temps)  // si mode_test=1 ou mode_temps=1, on ne vérifie pas l'encodeur
     {
-      if ( (avance_cours | recul_cours) & (cpt_mvt_10>5) ) // contrôle de l'encodeur après 0,5s de mouvement (pour l'accélération)
+      if ( (avance_cours | recul_cours) & (cpt_mvt_10>10) ) // contrôle de l'encodeur après 1,0s de mouvement (pour l'accélération)
       {
         --Tps_ctrl_encod;
         if (Tps_ctrl_encod<=0) 
         {
           Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
-          if ((abs(PosEncodeur-Anc_Encodeur)<50))  
+          if ((abs(PosEncodeur-Anc_Encodeur)<80))  // 80=nombre de points codeurs, augmenter la valeur pour augmenter le seuil
           { // erreur pas de changement de l'encodeur pendant un mouvement: peut être obstacle!
             erreur=3;
             Err_enc=HIGH;
@@ -323,11 +324,11 @@ void Ecran_base()
   oled.setFont(System5x7);
   oled.clear();
   oled.set2X();
-  oled.println("Portail JC"); 
+  oled.println(F("Portail JC")); 
   oled.set1X();
   //oled.setScrollMode(SCROLL_MODE_AUTO);
   oled.setScrollMode(SCROLL_MODE_OFF);
-  oled.setCursor(0,ligne_encodeur);oled.println("Pos=0");
+  oled.setCursor(0,ligne_encodeur);oled.println(F("Pos=0"));
 }
 
 void ecrit_eprom()
@@ -398,6 +399,8 @@ void lit_eprom()
    Serial.print(F("Tps fonctionnement maxi="));Serial.println(Tps_fonctionnement); 
    Serial.print(F("PosRalFerm="));Serial.println(PosRalenti_ferm);
    Serial.print(F("PosRalOuv="));Serial.println(PosRalenti_ouv);
+   Serial.print(F("Tps acc="));Serial.println(Tps_acc);
+   Serial.print(F("Tps dec="));Serial.println(Tps_dec);
 }
 
 //-------------------------------------------------- I N I T I A L I S A T I O N S -------------------------------------------------
@@ -425,8 +428,7 @@ void setup()
   pinMode(BpEch,INPUT);
   pinMode(data,INPUT);
   
-  Serial.println(F("Programme portail JC - F1IWQ 2021"));
-  Serial.println(F("Tapez ? pour l'aide"));
+  Serial.println(F("Programme portail JC - F1IWQ 2022\r\nTapez ? pour l'aide"));
 
   // initialisation de la conversion analogique
   // nota: on ne peut pas utiliser analogRead qui dure 100µS ce qui est beaucoup trop long.
@@ -444,7 +446,6 @@ void setup()
   // I2C pour oled
   Wire.begin();
   Wire.setClock(400000L);
-  Serial.println("I2C ok");
  
   // oled sans reset ------------------------------
   #if RST_PIN >= 0
@@ -452,13 +453,11 @@ void setup()
   #else // RST_PIN >= 0
     oled.begin(&Adafruit128x64,I2C_ADDRESS);
   #endif // RST_PIN >= 0
-  Serial.println("Oled ok");
   
   Ecran_base();
   
   // rx 433 MHz -------------------------
   Rx.enableReceive(digitalPinToInterrupt(data));  // On reçoit la télécommande sur INT0 (data=pin D2)
-  Serial.println("Rx ok");
   
   // IRQ encodeur --------------------------------
   #ifdef V1
@@ -473,7 +472,6 @@ void setup()
   //en V2 association de l'IRQ INT1 sur portB.D3=encodeur
   attachInterrupt(digitalPinToInterrupt(encod),gest_encodeur,CHANGE);
   #endif
-  Serial.println("IRQ ok");
   
   // Initialisation des variables
   chaine="";
@@ -513,12 +511,25 @@ void setup()
   telecom[7]=8;  
   telecom[8]=9;
   */
+  //PosRalenti_ferm=14000;
 }
+
 
 // traitement de fond à effectuer à chaque itération-----------------------
 void traitement()
 {
   bool trouve;
+
+  // mode test &&&&&&&&&&&&&----
+  /*
+  if (mode_test)
+  {
+    if (avance_cours) ++PosEncodeur;  // avance
+    if (recul_cours)  --PosEncodeur;  // recul
+  } 
+  */ 
+  // ---------------------------
+ 
   // lecture des fins de course et des autres entrées
   // Etats précédents (n-1)
   Aferme=Fc_ferme;
@@ -597,7 +608,7 @@ void traitement()
       
     }  
   }
-  
+
   // avance en cours (fermeture) ----------------------------------------------
   if (avance_cours==HIGH)
   {
@@ -606,7 +617,7 @@ void traitement()
     // front montant Fc avancé
     if ((!Aferme) & (Fc_ferme) & (posOk)) 
     {
-      PosRalenti_ferm=PosEncodeur-1000L;   // fixation de la position de passage GV->PV vers fermeture
+      PosRalenti_ferm=PosEncodeur-2000L;   // fixation de la position de passage GV->PV vers fermeture
     }  
     
     // Fin de course fermé ou cellule coupée arreter le mouvement d'avance
@@ -615,11 +626,11 @@ void traitement()
       if (Fc_ferme) ++Seq_mvt;  // compteur de séquencement
       arret();
     }
-    
+   
     // passer en pv
     if (
-         (posOk & (PosEncodeur>PosRalenti_ferm) & !memo_lent & !mode_test & !mode_temps) |
-         (mode_temps & (cpt_mvt>15) & !memo_lent)  // à ajuster manuellement
+         (posOk & (PosEncodeur>PosRalenti_ferm) & !memo_lent & !mode_temps) |  // mode encodeur
+         (mode_temps & (cpt_mvt>15) & !memo_lent)  // à ajuster manuellement   // mode temporel
        )  
     {
       Serial.println(F("Position lente vers avance atteinte"));
@@ -637,7 +648,7 @@ void traitement()
     {
       posOk=!Err_enc;                     // la position de l'encodeur est ok s'il n'est pas muet
       PosEncodeur=0;                      // RAZ de la position encodeur car front montant origine atteinte
-      PosRalenti_ouv=PosEncodeur+1000L;   // fixation de la position de passage GV->PV vers ouverture
+      PosRalenti_ouv=PosEncodeur+2000L;   // fixation de la position de passage GV->PV vers ouverture
     }  
      
     // Fin de course ouvert arreter le mouvement de recul (on ne tient pas compte de la cellule en recul)
@@ -649,14 +660,13 @@ void traitement()
     
     // passer en PV
     if ( 
-         (posOk & (PosEncodeur<PosRalenti_ouv) & !memo_lent & !mode_test & !mode_temps) |
+         (posOk & (PosEncodeur<PosRalenti_ouv) & !memo_lent & !mode_temps) |
          (mode_temps & (cpt_mvt>15) & !memo_lent)  // à ajuster manuellement
        ) 
     {
       Serial.println(F("Position lente vers recul atteinte"));
       recul_lent();
-    }
-    
+    }   
   }
 
   // récepteur radio ----------------------------------------------------
@@ -664,15 +674,15 @@ void traitement()
   {
     if ((tempo_affT<9) )  // radio filtrée 1 seconde
     {
-      Serial.print("Recu de RX: ");
+      Serial.print(F("Recu de RX: "));
       Code=Rx.getReceivedValue();
       Serial.print(Code);
-      Serial.print(" / ");
+      Serial.print(F(" / "));
       Nbit=Rx.getReceivedBitlength();
       Serial.print(Nbit);
-      Serial.print("bit ");
+      Serial.print(F("bit "));
       Protocole=Rx.getReceivedProtocol();
-      Serial.print("Protocole: ");
+      Serial.print(F("Protocole: "));
       Serial.print(Protocole);
  
       if (!menu)
@@ -745,6 +755,7 @@ void mode2()
   m34=LOW;
 }
 
+#ifdef modes_etendus
 // mode 3 : envoi de la sinusoide une fois sur 3 : on arme la gachette 2 fois consécutifs sur 6 à chaque retour à 0 de la sinusoide secteur 
 // la vitesse est de 30%
 void mode3()
@@ -814,6 +825,7 @@ void mode_34()
   m23=LOW;
   m34=HIGH;
 }
+#endif
 
 void avance_rapide()
 {
@@ -821,26 +833,42 @@ void avance_rapide()
   {
     if (Fc_ferme==LOW) 
     {
-      if (!avance_cours)
+      if (!avance_cours & !recul_cours)
       {
         Serial.println(F("Accélération avance"));
         avance_lente();  // accélération
-        tempo(Tps_acc);
+        if (!avance_cours)
+        {
+          i=0;
+          do
+          {
+            ++i;
+            delay(100);
+          }
+          while ((!Fc_ferme) and (i<Tps_acc)) ;  // sort si Fc_ferme=HIGH ou i>=Tps_act
+        }
       }
+      
       if (recul_cours)   // inversion
       {
         recul_lent();
-        tempo(Tps_dec);  
+        i=0;
+        do
+        {
+          ++i; 
+          delay(100);
+        }
+        while ((!Fc_ouvert) and (i<Tps_dec)) ;  // sort si Fc_recul=HIGH ou i>=Tps_dec 
         arret();
-        tempo(Tps_acc);
       }
 
-      if (posOk | mode_temps)  // si position connue encodeur ou mode temps, on avance en rapide
+      if ((posOk | mode_temps) & !Fc_ferme)  // si position connue encodeur ou mode temps, on avance en rapide
       {
         s=F("Avance rapide   ");
         oled.setCursor(0,2);oled.println(s);
         Serial.println(s);
         mode1();                // vitesse rapide
+        angle_retard=0;
         digitalWrite(R2,HIGH);  // R2 à 1 (N sur W et éclairage)
         if (Sens_Ouv==1)
         { 
@@ -868,21 +896,33 @@ void recul_rapide()
 {
   if (Fc_ouvert==LOW)  // en recul on ne tient pas compte de la cellule
   {
-    if (!recul_cours)
+    if ((!recul_cours) & (!avance_cours))
     {
       Serial.println(F("Accélération recul"));
       recul_lent();    // accélération
-      tempo(Tps_acc);
+      i=0;
+      do
+      {
+        ++i;
+        delay(100);
+      }
+      while ((!Fc_ouvert) and (i<Tps_acc)) ;  // sort si Fc_ouvert=HIGH ou i>=Tps_act
     }
+    
     if (avance_cours)  // inversion
     {
       avance_lente();  // réduire la vitesse
-      tempo(Tps_dec);       // 1s
-      arret();         // et arrêt pour inverser le sens
-      tempo(Tps_acc);       // 1s  
+      i=0;
+      do
+      {
+        ++i; 
+        delay(100);
+      }
+      while ((!Fc_ouvert) and (i<Tps_dec)) ;  // sort si Fc_ouvert=HIGH ou i>=Tps_dec    
+      arret();         // et arrêt pour inverser le sens 
     }
 
-    if (posOk | mode_temps)  // si position connue encodeur ou mode temps, on recule en rapide
+    if ((posOk | mode_temps) & !Fc_ouvert)  // si position connue encodeur ou mode temps, on recule en rapide
     {
       s=F("Recul rapide    ");
       oled.setCursor(0,2);oled.println(s);
@@ -921,24 +961,24 @@ void avance_lente()
       if (recul_cours)
       {
         recul_lent();
-        tempo(Tps_dec);
+        delay(Tps_dec*100);  
         arret();
-        tempo(Tps_acc);
       }
       s=F("Avance lente    ");
       oled.setCursor(0,2);oled.println(s);
       Serial.println(s);
      
-     if (!memo_lent & avance_cours)
-     {
-        // on vient de GV vers PV: passer en mode 2/3
-        mode_23();  // mode_34();
-        tempo(7);
-      }
+    // if (!memo_lent & avance_cours)
+    // {
+    //    // on vient de GV vers PV: passer en mode 2/3
+    //    mode_23();  // mode_34();
+    //    delay(700);
+    //  }
+     
       mode2();                // vitesse lente
       //angle_retard=20;
       digitalWrite(R2,HIGH);  // R2 à 1 (N sur W et éclairage)
-      tempo(2);               // évite de coller 2 relais simultanément
+      delay(200);               // évite de coller 2 relais simultanément 
       if (Sens_Ouv==1)
       {
         digitalWrite(R3,HIGH);  // R3 à 1 (CT sur V)
@@ -964,26 +1004,27 @@ void recul_lent()
 {
   if (Fc_ouvert==LOW)  // en recul on ne tient pas compte de la cellule
   {
-    if (avance_cours)
+    if (avance_cours) 
     {
       avance_lente();
-      tempo(Tps_dec);
+      delay(Tps_dec*100);
       arret();
-      tempo(Tps_acc);
     }
     s=F("Recul lent   ");
     oled.setCursor(0,2);oled.println(s);
     Serial.println(s);
-    if (!memo_lent & recul_cours)
-    {
-      // on vient de GV vers PV: passer en mode 2/3
-      mode_23();   //mode_34();
-      tempo(7);
-    }
+ 
+    //if (!memo_lent & recul_cours)
+   // {
+   //   // on vient de GV vers PV: passer en mode 2/3
+   //   mode_23();   //mode_34();
+   //   delay(700);
+   // }
+
     mode2();                   // vitesse lente
     //angle_retard=20;
     digitalWrite(R2,HIGH);     // R2 à 1 (N sur W et éclairage)
-    tempo(2);                  // évite de coller 2 relais simultanément
+    delay(200);                // évite de coller 2 relais simultanément 
     if (Sens_Ouv==1)
     {
       digitalWrite(R3,LOW);    // R3 à 0 (rien sur V)
@@ -1019,9 +1060,10 @@ void arret()
   dem_cpt_mvt=LOW;
   arrete=HIGH;
   cpt_mvt=0;
+  cpt_mvt_10=0;
 }
 
-// renvoie HIGH si le bouton + est à 1 depuis 0,1 seconde
+// renvoie HIGH si le bouton + est à 1 depuis 0,2 seconde
 bool Etat_BoutonP()
 {
   dem_inc_boutonP=!digitalRead(BpP);  // si bouton=0, incrémenter la tempo d'appui dans timer
@@ -1093,12 +1135,12 @@ int coordY()
 // ------------------------------------------------ P R O G R A M M E   P R I N C I P A L --------------------------------------------
 void loop() 
 {
-  digitalWrite(Tick,HIGH);
+  //digitalWrite(Tick,HIGH);
   ++iteration;
   if (iteration>32000) iteration=0;
-    
+      
   traitement();    // traitement de fond
-  digitalWrite(Tick,LOW);
+  //digitalWrite(Tick,LOW);
   
   if (!menu)
   { 
@@ -1196,8 +1238,7 @@ void loop()
       oled.setInvertMode(1);
       oled.setCursor(0,4);oled.println(s);
       oled.setInvertMode(0);
-    }
-      
+    }   
   }
     
   //réception des données depuis USB
@@ -1231,13 +1272,10 @@ void loop()
     Serial.println(F("m1 à m6 : 1 sinusoide sur 1..6"));
     Serial.println(F("md2 à 6 : 1/2 sinusoide sur 2..5"));
     tempo(1);
-    Serial.println(F("sec     : Affiche la sinusoide du secteur"));  
-    Serial.println(F("pos     : Affiche la position de l'encodeur")); 
+    Serial.println(F("sec     : Affiche la sinusoide du secteur\r\npos     : Affiche la position de l'encodeur")); 
     Serial.println(F("tar     : Avance en rapide")); 
     tempo(1);
-    Serial.println(F("trr     : Recul en rapide")); 
-    Serial.println(F("tal     : Avance en lent")); 
-    Serial.println(F("trl     : Recul en lent")); 
+    Serial.println(F("trr     : Recul en rapide\r\ntal     : Avance en lent\r\ntrl     : Recul en lent")); 
     tempo(1);  
     Serial.println(F("ENTREE  : Arret")); 
     Serial.println(F("e       : Etat des entrees"));   
@@ -1249,28 +1287,12 @@ void loop()
   }
   else
 
-  if (chaine.substring(0,5)=="angle")
+  if (chaine.substring(0,5)==F("angle"))
   {
     chaine.remove(0,5); // reste la valeur
     angle_retard=chaine.toInt();
     if ((angle_retard<0) | (angle_retard>70)) Serial.println(F("Erreur valeur angle"));
     else {Serial.print(F("Angle fixe a "));Serial.println(angle_retard);}
-    chaine="";
-  }
-  else
-
-  if (chaine==F("md2"))
-  {
-    Serial.println(F("mode D2"));
-    moded2();
-    chaine="";
-  }
-  else
-
-  if (chaine==F("md3"))
-  {
-    Serial.println(F("mode D3"));
-    moded3();
     chaine="";
   }
   else
@@ -1291,6 +1313,7 @@ void loop()
   }
   else
 
+  #ifdef modes_etendus
   if (chaine==F("m23"))
   {
     Serial.println(F("mode 23"));
@@ -1307,7 +1330,6 @@ void loop()
   }
   else
   
-  
   if (chaine==F("m3"))
   {
     Serial.println(F("mode 3"));
@@ -1315,6 +1337,23 @@ void loop()
     chaine="";
   }
   else
+
+  if (chaine==F("md2"))
+  {
+    Serial.println(F("mode D2"));
+    moded2();
+    chaine="";
+  }
+  else
+
+  if (chaine==F("md3"))
+  {
+    Serial.println(F("mode D3"));
+    moded3();
+    chaine="";
+  }
+  else
+  #endif
 
   if (chaine==F("menu"))
   {
@@ -1363,7 +1402,7 @@ void loop()
   }
   else
   
-  if (chaine=="sec")
+  if (chaine==F("sec"))
   {
     Serial.print(F("Erreur="));Serial.println(erreur);
     for (i=0 ; i<=50 ; i++)
@@ -1375,7 +1414,7 @@ void loop()
   }
   else 
 
-  if (chaine=="pos")
+  if (chaine==F("pos"))
   {
     Serial.print(F("Position encodeur="));Serial.println(PosEncodeur);
     chaine="";
@@ -1383,7 +1422,7 @@ void loop()
   else
    
   // avance rapide
-  if (chaine=="tar")
+  if (chaine==F("tar"))
   {  
     avance_rapide();
     chaine="";
@@ -1391,7 +1430,7 @@ void loop()
   else
 
   // recul rapide
-  if (chaine=="trr")
+  if (chaine==F("trr"))
   {
     recul_rapide();
     chaine="";
@@ -1399,7 +1438,7 @@ void loop()
   else
 
   // avance lente
-  if (chaine=="tal")
+  if (chaine==F("tal"))
   {
     avance_lente();
     chaine="";
@@ -1407,14 +1446,14 @@ void loop()
   else
 
   // recul lent
-  if (chaine=="trl")
+  if (chaine==F("trl"))
   {
     recul_lent();
     chaine="";
   }
   else
   
-  if (chaine=="im")
+  if (chaine==F("im"))
   {
     Serial.print(F("Menu="));Serial.println(menu);
     Serial.print(F("ligne menu="));Serial.println(ligne_menu);
@@ -1444,8 +1483,8 @@ void loop()
     // si arreté sur un FdC 
     if (Fc_ouvert | Fc_ferme)
     {
-      Serial.println("cas1");
-      if (!avance_cours & !recul_cours) // ne se produit jamais 
+      Serial.println(F("cas1"));
+      if (!avance_cours & !recul_cours) 
       {
         if (Fc_ouvert) avance_rapide();
         if (Fc_ferme)  recul_rapide();
@@ -1457,7 +1496,7 @@ void loop()
       // si pas arrété sur un FdC et pas de mvt en cours
       if (!avance_cours & !recul_cours)
       {
-        Serial.println("cas2");
+        Serial.println(F("cas2"));
         // dernier mvt était recul ou avance?
         if (recul) avance_rapide(); else recul_rapide(); 
       } 
@@ -1465,8 +1504,8 @@ void loop()
       else
       // si mvt en cours
       {
-        Serial.println("cas3");
-        // si mode Av -> arret -> recul -> arret
+        Serial.println(F("cas3"));
+        // si (sequencement) mode Av -> arret -> recul -> arret
         if (PPS==1)
         {
           if (memo_lent) arret();
@@ -1569,7 +1608,7 @@ void loop()
     // sortie du mode MENU
     if ( (Fm_Ech & (Seq==0)) | (Tempo_menu>Tempo_sortie_menu) )
     {
-      Serial.println(F("sortie du mode menu"));
+      Serial.println(F("sortie du menu"));
       simuMenu=LOW;   
       menu=LOW;
       curseur=LOW;
@@ -2117,7 +2156,7 @@ void loop()
         {
           Enter=LOW;
           oled.setCursor(0,7);
-          oled.print("Supp telecommande ");oled.print(ligne_menu);
+          oled.print(F("Supp telecommande "));oled.print(ligne_menu);
           // à la première itération on supprime la télécommande ligne_menu-1 soit i-1
           for (i=ligne_menu ; i<Nbre_telecom ; i++)
           {

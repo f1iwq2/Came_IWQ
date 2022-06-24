@@ -1,11 +1,11 @@
 (export (version D)
   (design
-    (source "C:\\Users\\moua\\Documents\\portail_jc V2.0\\portail_jc.sch")
-    (date "30/10/2021 11:23:52")
+    (source "C:\\Users\\moua\\Documents\\Kicad\\portail_jc V2.0\\portail_jc.sch")
+    (date "24/06/2022 21:10:00")
     (tool "Eeschema (5.1.10)-1")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
-        (title "Clone de carte CAME BZX6N-7N")
+        (title "Clone de carte CAME ZBX6N-7N")
         (company F1IWQ)
         (rev 2.1)
         (date 30/10/2021)
@@ -16,7 +16,7 @@
         (comment (number 4) (value ""))))
     (sheet (number 2) (name /puissance/) (tstamps /6130ED2A/)
       (title_block
-        (title "Clone de carte CAME BZX6N-7N")
+        (title "Clone de carte CAME ZBX6N-7N")
         (company)
         (rev 2.1)
         (date 30/10/2021)
@@ -146,7 +146,7 @@
       (sheetpath (names /) (tstamps /))
       (tstamp 611CA58F))
     (comp (ref R14)
-      (value 220)
+      (value 2,7k)
       (footprint Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal)
       (datasheet ~)
       (libsource (lib Device) (part R) (description Resistor))

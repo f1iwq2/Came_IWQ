@@ -4,7 +4,7 @@ EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
 Sheet 1 2
-Title "Clone de carte CAME BZX6N-7N"
+Title "Clone de carte CAME ZBX6N-7N"
 Date "30/10/2021"
 Rev "2.1"
 Comp "F1IWQ"
@@ -414,7 +414,7 @@ L Device:R R14
 U 1 1 61280865
 P 9350 1600
 F 0 "R14" V 9557 1600 50  0000 C CNN
-F 1 "220" V 9466 1600 50  0000 C CNN
+F 1 "2,7k" V 9466 1600 50  0000 C CNN
 F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 9280 1600 50  0001 C CNN
 F 3 "~" H 9350 1600 50  0001 C CNN
 	1    9350 1600
