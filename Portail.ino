@@ -1,4 +1,4 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 24 06 2022 11h
+// portail IWQ carte CAME ZBX6N/7N - Version 02 07 2022 11h
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -253,7 +253,10 @@ void Interrupt_T1()
         if (Tps_ctrl_encod<=0) 
         {
           Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
-          if ((abs(PosEncodeur-Anc_Encodeur)<80))  // 80=nombre de points codeurs, augmenter la valeur pour augmenter le seuil
+          if (
+               ((abs(PosEncodeur-Anc_Encodeur)<80) & !memo_lent) | // 80=nombre de points codeurs, augmenter la valeur pour augmenter le seuil de détection d'erreur
+               ((abs(PosEncodeur-Anc_Encodeur)<20) & memo_lent)  
+             )  
           { // erreur pas de changement de l'encodeur pendant un mouvement: peut être obstacle!
             erreur=3;
             Err_enc=HIGH;
@@ -617,7 +620,7 @@ void traitement()
     // front montant Fc avancé
     if ((!Aferme) & (Fc_ferme) & (posOk)) 
     {
-      PosRalenti_ferm=PosEncodeur-2000L;   // fixation de la position de passage GV->PV vers fermeture
+      PosRalenti_ferm=PosEncodeur-1000L;   // fixation de la position de passage GV->PV vers fermeture
     }  
     
     // Fin de course fermé ou cellule coupée arreter le mouvement d'avance
@@ -648,7 +651,7 @@ void traitement()
     {
       posOk=!Err_enc;                     // la position de l'encodeur est ok s'il n'est pas muet
       PosEncodeur=0;                      // RAZ de la position encodeur car front montant origine atteinte
-      PosRalenti_ouv=PosEncodeur+2000L;   // fixation de la position de passage GV->PV vers ouverture
+      PosRalenti_ouv=PosEncodeur+1000L;   // fixation de la position de passage GV->PV vers ouverture
     }  
      
     // Fin de course ouvert arreter le mouvement de recul (on ne tient pas compte de la cellule en recul)
