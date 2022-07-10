@@ -1,4 +1,5 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 02 07 2022 11h
+// portail IWQ carte CAME ZBX6N/7N - Version 06 07 2022 13h
+// moteur asynchrone
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
 // si vrai NANO     : choisir processeur : ATMEGA 328P
@@ -30,7 +31,7 @@
 #include <SSD1306init.h>
 
 // écran oled
-#define I2C_ADDRESS 0x3C
+#define I2C_ADDRESS 0x3C   
 // Sans broche RESET
 #define RST_PIN -1
 
@@ -113,7 +114,7 @@ volatile int  Temps_boutonM,Temps_boutonP,val_tempo,ligne_menu,PosRalenti_ferm,P
 volatile int  Nbre_demi_sinus,angle_retard,Temps_boutonE,AncErreur,Aech,Seq,Temps_boutonEch;
 volatile int  Tempo_menu,derniere_ligne,premiere_ligne,PageMenu,cpt_mvt,Seq_mvt,attendre,timer;
 volatile int  Nbre_telecom,tempo_affT,Nbit,Protocole,Temps_bornier,Tps_fonctionnement,Tps_fonc_P;
-volatile int  decale,offset,Tps_cellule,Tps_ctrl_encod,cpt_mvt_10,AAAech,AAech;
+volatile int  decale,offset,Tps_cellule,Tps_ctrl_encod,cpt_mvt_10,AAAech,AAech,mem_delta,delta;
 volatile int  PosEncodeur,Anc_Encodeur,vitesse,AncPos,Tps_accP,Tps_acc,Tps_dec,Tps_decP;
 volatile byte Sens_Ouv,Sens_Ouv_P,PPS,PPS_P,octet,compt_vit,TpsRalenti_ouv,TpsRalenti_ferm;
 volatile bool demande_arret,posOnde,trouveOnde,etatencod,ancetatencod,Fc_ferme,Fc_ouvert,avance,recul ; 
@@ -252,21 +253,24 @@ void Interrupt_T1()
         --Tps_ctrl_encod;
         if (Tps_ctrl_encod<=0) 
         {
-          Tps_ctrl_encod=3;     // vérification toutes les 0,3 seconde   
+          Tps_ctrl_encod=5;     // vérification toutes les 0,5 seconde
+          delta=PosEncodeur-Anc_Encodeur;   
           if (
-               ((abs(PosEncodeur-Anc_Encodeur)<80) & !memo_lent) | // 80=nombre de points codeurs, augmenter la valeur pour augmenter le seuil de détection d'erreur
-               ((abs(PosEncodeur-Anc_Encodeur)<20) & memo_lent)  
+               ((abs(delta)<80) & !memo_lent) | // 80=nombre de points codeurs, augmenter la valeur pour augmenter le seuil de détection d'erreur
+               ((abs(delta)<20) & memo_lent)  // 100=nombre de points codeurs, augmenter la valeur pour augmenter le seuil
              )  
-          { // erreur pas de changement de l'encodeur pendant un mouvement: peut être obstacle!
-            erreur=3;
+          { 
+            // erreur pas de changement de l'encodeur pendant un mouvement: peut être obstacle!
+            if (memo_lent) erreur=3; else erreur=4;
             Err_enc=HIGH;
+            mem_delta=delta;
             if (avance_cours) demande_recul_imm=HIGH; // sur une avance, on recule sans décélération
             else demande_arr_imm=HIGH;                // sur un recul, on arrete sans décélération
           }   
           else 
           {
             Err_enc=LOW;
-            if (erreur==3) {erreur=0;}  
+            if ((erreur==3) | (erreur==4)) {erreur=0;}  
           }
         Anc_Encodeur=PosEncodeur;
         }
@@ -1178,12 +1182,13 @@ void loop()
       oled.setCursor(0,ligne_erreur);oled.print(vide);
     }
     
-    if ((AncErreur==0) & (erreur==3))
+    if ((AncErreur==0) & ((erreur==3) | (erreur==4)))
     { 
       AncErreur=erreur;
-      s=F("Encodeur muet       ");
+      s=F("Encodeur muet ");
+      if (erreur==3) s=s+F(("en lent  ")); else s=s+F(("en rapide "));
       oled.setCursor(0,ligne_erreur);oled.print(s);
-      Serial.println(s);
+      Serial.print(s);Serial.println(mem_delta);
     }  
 
     // Affichage Evt Fdc et cellule ----------------------------------------------------------
