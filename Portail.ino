@@ -1,4 +1,4 @@
-// portail IWQ carte CAME ZBX6N/7N - Version 06 07 2022 13h
+// portail IWQ carte CAME ZBX6N/7N - Version 30 09 2022 18h
 // moteur asynchrone
 // pour ARDUINO NANO - F1IWQ
 // si clone de NANO : choisir processeur : ATMEGA 328P Old bootloader
@@ -386,8 +386,8 @@ void lit_eprom()
    if ((Tps_fonctionnement>99) | (Tps_fonctionnement<1)) Tps_fonctionnement=99;
    if ((PosRalenti_ouv>32000) | (PosRalenti_ouv<1)) PosRalenti_ouv=1000;
    if ((PosRalenti_ferm>32000) | (PosRalenti_ferm<1)) PosRalenti_ferm=32000;
-   if ((Tps_acc>30) | (Tps_acc<2)) Tps_acc=10;
-   if ((Tps_dec>30) | (Tps_dec<2)) Tps_dec=10;
+   if ((Tps_acc>30) | (Tps_acc<0)) Tps_acc=10;
+   if ((Tps_dec>30) | (Tps_dec<0)) Tps_dec=10;
      
    // les codes des télécommandes sont stockées en @10 eeprom
    // on peut stocker (1024-10)/4 = 253 télécommandes
@@ -847,12 +847,11 @@ void avance_rapide()
         if (!avance_cours)
         {
           i=0;
-          do
+          while ((!Fc_ferme) and (i<Tps_acc)) ;  // sort si Fc_ferme=HIGH ou i>=Tps_act
           {
             ++i;
             delay(100);
-          }
-          while ((!Fc_ferme) and (i<Tps_acc)) ;  // sort si Fc_ferme=HIGH ou i>=Tps_act
+          }   
         }
       }
       
@@ -908,12 +907,12 @@ void recul_rapide()
       Serial.println(F("Accélération recul"));
       recul_lent();    // accélération
       i=0;
-      do
+      while ((!Fc_ouvert) and (i<Tps_acc)) ;  // sort si Fc_ouvert=HIGH ou i>=Tps_act
       {
         ++i;
         delay(100);
       }
-      while ((!Fc_ouvert) and (i<Tps_acc)) ;  // sort si Fc_ouvert=HIGH ou i>=Tps_act
+     
     }
     
     if (avance_cours)  // inversion
@@ -924,8 +923,8 @@ void recul_rapide()
       {
         ++i; 
         delay(100);
-      }
-      while ((!Fc_ouvert) and (i<Tps_dec)) ;  // sort si Fc_ouvert=HIGH ou i>=Tps_dec    
+      }       
+      while ((!Fc_ferme) and (i<Tps_dec)) ;  // sort si Fc_ouvert=HIGH ou i>=Tps_dec
       arret();         // et arrêt pour inverser le sens 
     }
 
@@ -1990,7 +1989,7 @@ void loop()
             oled.setCursor(66,coordY());oled.print(Tps_accP);
             Simu2=LOW;
           }
-          if ((Fm_M | Simu8) & (Tps_acc>2))  
+          if ((Fm_M | Simu8) & (Tps_acc>0))  
           {
             --Tps_accP;
             oled.setCursor(66,coordY());oled.print(Tps_accP);oled.print(" ");
@@ -2036,7 +2035,7 @@ void loop()
             oled.setCursor(66,coordY());oled.print(Tps_decP);
             Simu2=LOW;
           }
-          if ((Fm_M | Simu8) & (Tps_acc>2))  
+          if ((Fm_M | Simu8) & (Tps_acc>0))  
           {
             --Tps_decP;
             oled.setCursor(66,coordY());oled.print(Tps_decP);oled.print(" ");
